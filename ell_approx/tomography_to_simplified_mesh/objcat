@@ -1,0 +1,97 @@
+#!/usr/local/bin/perl -w
+
+undef $GROUP_SET;
+undef $GROUP_KEEP;
+
+undef $debug;
+@j=();
+@ARGVI=@ARGV;
+for($i=0;$i<=$#ARGV;$i++){
+    if($ARGV[$i] =~ /-D(\w+)=(.*)/){
+	$$1=$2;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, $2,);
+	next;
+    }
+    if($ARGV[$i] =~ /-D(\w+)/){
+	$$1=1;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, 1,);
+	next;
+    }
+}
+foreach $i (@j){
+    splice(@ARGV,$i,1);
+}
+if(defined $debug){
+    print "ARGVI: @ARGVI\n";
+    print "ARGV: @ARGV\n";
+    print "DEFS:";
+    for($i=0;$i<=$#DEFS;$i++){
+	print " $DEFS[$i]=${$DEFS[$i]}";
+    }
+    print "\n";
+    print "DHSH:";
+    while (($key,$value) = each %DHSH){
+	print " DHSH\{$key\}=$value";
+    }
+    print "\n";
+}
+
+if($#ARGV < 1){
+    print "objcat: concatenate obj files\n";
+    die   "  usage: objcat in_file1 ... in_fileN out_file\n";
+}
+
+$outfile=pop @ARGV;
+
+$gmax=0;       # maximum group id in the current file
+$nmax=0;       # maximum node id in the current file
+# offset of nodes and groups based on total number of nodes of the
+# files so far
+$noff=$goff=0; # offsets
+
+open(OFILE, ">$outfile") || die "$0: $outfile $!.\n";
+foreach $ifile (@ARGV){
+    open(IFILE, $ifile) || die "$0: $ifile $!\n";
+    print "file $ifile\n" if defined($debug);
+
+    $goff=$gmax;
+    $noff=$nmax;
+    print "   offsets group: $goff nodes: $noff\n" if defined($debug);
+
+    while (<IFILE>){
+	s/\s+$//;
+	s/^\s+//;
+
+	/^#/   && do{print OFILE "$_" . "\n"; next;};
+	/^v\s/ && do{print OFILE "$_" . "\n";
+		     $nmax++;
+		     next;};
+
+	/^g\s+(\S+)/ && do{$g=$1;
+			   unless(defined($GROUP_KEEP)){
+			       $g+=$goff;
+			   }
+			   if(defined($GROUP_SET)){
+			       $g=$GROUP_SET;
+			   }
+			   print OFILE "g $g\n";
+#			   $gmax=($g>$gmax) ? $g : $gmax;
+			   $gmax++;
+			   next;};
+
+	/^[flp]\s/ && do{s/\/[0-9]*//g;
+		     @f=split;
+		     foreach (@f[1..$#f]){
+			 $_+=$noff;
+		     }
+		     print OFILE "@f\n";
+		     next;};
+
+    }
+    close IFILE;
+}
+close OFILE;

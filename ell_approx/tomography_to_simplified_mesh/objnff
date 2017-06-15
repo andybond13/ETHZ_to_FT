@@ -1,0 +1,29 @@
+#!/usr/local/bin/perl -w
+
+# number of polygons in obj file
+# Written by:
+# Srdjan Simunovic
+# Oak Ridge National Laboratory
+# email: simunovics@ornl.gov
+# Your mileage may vary, use at your own risk.
+
+$pgnam="objnff";
+
+if(@ARGV < 2){
+    die "usage: $pgnam in_file out_file\n";
+}
+
+open(IFILE, "$ARGV[0]") || die "$pgnam: $ARGV[0] file does not exsist.\n";
+open(OFILE, ">$ARGV[1]") || die "$pgnam: cannot open $ARGV[1].\n";
+
+$nf=0;
+while (<IFILE>){
+    chop;
+    if(/^f /) {
+	$nf++;
+    }
+}
+close IFILE;
+
+print OFILE "$nf\n";
+close OFILE;

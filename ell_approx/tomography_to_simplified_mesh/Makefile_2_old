@@ -1,10 +1,14 @@
+!superseceded - visit /battery/ETH_labeled_particles/tmp
+
 include filelist.in
+# meshfiles = Island_0001.mesh Island_0002.mesh Island_0003.mesh Island_0004.mesh Island_0005.mesh Island_0006.mesh Island_0007.mesh Island_0008.mesh Island_0009.mesh Island_0010.mesh
+# end filelist.in
 
 NPOLY=1000
 RVAL=0.6
 
 all : $(meshfiles)
-	join.sh
+	meshcat $(meshfiles) all.mesh -DCLEAN
 
 %.mesh : image.idx
 	$(eval MY_NAM:=$(shell echo $@ | sed 's/\.mesh//'))
@@ -14,7 +18,7 @@ all : $(meshfiles)
 	minpts.pl ${MY_NAM}.pts ${MY_NAM}.mpts
 	ptssub.pl ${MY_NAM}.pts ${MY_NAM}.mpts ${MY_NAM}.ptm
 	mkdir -p _tmp/${MY_IDX}
-	cd _tmp/${MY_IDX} ; powercrust -R ${RVAL} -i ../../${MY_NAM}.ptm ; simplify -i poleinfo -o simp_poles -n 3.0 -r 3.0; powercrust -p -i simp_poles; orient -i pc.off -o ../../${MY_NAM}.off ;
+	cd _tmp/${MY_IDX} ; powercrust -R ${RVAL} -i ../../${MY_NAM}.ptm ; orient -i pc.off -o ../../${MY_NAM}.off
 	off2obj ${MY_NAM}.off ${MY_NAM}.obj -DGROUP_LABEL=${MY_IDX} -DSHIFTF=${MY_NAM}.mpts
 	qslim -t ${NPOLY} -o ${MY_NAM}.kbj ${MY_NAM}.obj
 	obj2mesh1 ${MY_NAM}.kbj ${MY_NAM} -DGROUP_LABEL
@@ -22,25 +26,21 @@ all : $(meshfiles)
 
 # comment line if do not want to save intermediate files
 # by default all are saved
-#.PRECIOUS: %.pts
-#.PRECIOUS: %.off
-#.PRECIOUS: %.obj
-#.PRECIOUS: %.kbj
-#.PRECIOUS: %.mpts
-#.PRECIOUS: %.ptm
+.PRECIOUS: %.pts
+.PRECIOUS: %.off
+.PRECIOUS: %.obj
+.PRECIOUS: %.kbj
+.PRECIOUS: %.mpts
+.PRECIOUS: %.ptm
 
 tidy :
 	rm -f *.kbj
 	rm -f *.obj
 	rm -f *.off
+	rm -f *.pts
 	rm -f *.mpts
 	rm -f *.ptm
 	rm -rf _tmp
 
-cleanpoints:
-	rm -f *.pts
-
 clean : tidy
 	rm -f *.mesh
-
-reallyclean : cleanpoints clean

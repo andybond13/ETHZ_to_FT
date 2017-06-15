@@ -1,0 +1,78 @@
+#!/usr/local/bin/perl -w
+
+# set number of polygons to qslim
+# Written by:
+# Srdjan Simunovic
+# Oak Ridge National Laboratory
+# email: simunovics@ornl.gov
+# Your mileage may vary, use at your own risk.
+
+$pgnam="polyset";
+
+$NTARGET=500;
+$NCUTOFFTOP=2000;
+$NCUTOFFBOT=20;
+$NFAC=0.25;
+
+undef $debug;
+@j=();
+@ARGVI=@ARGV;
+for($i=0;$i<=$#ARGV;$i++){
+    if($ARGV[$i] =~ /^-D(\w+)=(.*)/){
+	$$1=$2;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, $2,);
+	next;
+    }
+    if($ARGV[$i] =~ /^-D(\w+)/){
+	$$1=1;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, 1,);
+	next;
+    }
+}
+foreach $i (@j){
+    splice(@ARGV,$i,1);
+}
+if(defined $debug){
+    print "ARGVI: @ARGVI\n";
+    print "ARGV: @ARGV\n";
+    print "DEFS:";
+    for($i=0;$i<=$#DEFS;$i++){
+	print " $DEFS[$i]=${$DEFS[$i]}";
+    }
+    print "\n";
+    print "DHSH:";
+    while (($key,$value) = each %DHSH){
+	print " DHSH\{$key\}=$value";
+    }
+    print "\n";
+}
+
+if(@ARGV < 1){
+    die "usage: $pgnam polynum\n";
+}
+
+if($ARGV[0] eq '-'){
+    $p=<>;
+    chop $p;
+}
+else{
+    $p=$ARGV[0];
+}
+
+if($p >= $NCUTOFFBOT && $p <= $NTARGET){
+    $r=int($p*$NFAC);
+}
+elsif($p > $NTARGET && $p <= $NCUTOFFTOP){
+    $r=int($p*$NFAC);
+}
+elsif($p > $NCUTOFFTOP){
+    $r=$NTARGET;
+}
+else{
+    $r=$p;
+}
+print "$r\n";

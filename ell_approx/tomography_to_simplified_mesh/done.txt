@@ -1,17 +1,47 @@
+Check both A and B sections.  One interesting thing with make
+processing mode (A) is that every once in a while, particles are
+created that have shooting nodes. If those particles are processed
+outside make (see script fixup.sh), they do not have shhoting points.
+
+The new step in both A and B versions is addition of program
+simplify. This siginificantly improves quality of the resulting mesh.
+Section A gives instructions how to use make for creating
+particles. It uses fixed target of 1000 polygons for slimming each
+particles. We will actually end up going with Section B because NICS
+computers would not be able to use large parallel
+makes. Parallelization in Section B would come for parallel execution
+of multiple scripts, each with its own parameters, say 1-1000,
+1001-2000, etc. Section B also has variable polygon target for qslim
+based on particle's original number of polygons in powercrust.
+
+Section A) Instructions how to use make command to generate polygonal mesh for particles.
+
+Need to have programs and the libraries and modules the programs use:
+    scanStackRange.pl
+    scanStackRangeGrain1.pl
+    minpts.pl
+    ptssub.pl
+    powercrust, simplify, orient   # from powercrust distribution
+    off2obj
+    qslim     # qslim distribution
+    obj2mesh1
+    meshcat
+
+
 Process images to create image.idx file that is used for Makefile
-scanStackRange.pl  A_remove_island_2000_labels*.tif --verbose
+scanStackRange.pl  NMC_90wt_2000bar_*.tif --verbose
 
 Figure out how many particles are in the image files:
 tail -1 image.idx | awk '{print $1}'
-2941
-So, in this case there are 2941 particles.
+13993
+So, in this case there are 13993 particles.
 
 Now create list that Makefile will use for geometry generation. There are two options, shuffled and unshuffled list. Unshuffled is better for tracking progress. Shuffled is better for speed if parallel make execution is used.
 
 rm -f i.lst
 
 Unshuffled:
-perl -e '{@a=(1..2941);for($i=0;$i<@a;$i++){if($i==0){print "meshfiles = ";}; printf("Island_%06d.mesh", $a[$i]); if($i!=$#a){print " \\";}; print "\n";}}' > i.lst
+perl -e '{@a=(1..13993);for($i=0;$i<@a;$i++){if($i==0){print "meshfiles = ";}; printf("Island_%06d.mesh", $a[$i]); if($i!=$#a){print " \\";}; print "\n";}}' > i.lst
 
 Shuffled:
 In case of parallel make execution we do not want simultaneous reading by different processes of the same tif files, because particles are numbered as they are layed down in the sample so that particles with similar id share similar z coordinates and therefore are specified in the same image files.
@@ -19,21 +49,63 @@ You need to have perl module:
 List::Util
 installed.
 
-perl -MList::Util='shuffle' -e '{@a=shuffle((1..2941));for($i=0;$i<@a;$i++){if($i==0){print "meshfiles = ";}; printf("Island_%06d.mesh", $a[$i]); if($i!=$#a){print " \\";}; print "\n";}}' > i.lst
+perl -MList::Util='shuffle' -e '{@a=shuffle((1..13993));for($i=0;$i<@a;$i++){if($i==0){print "meshfiles = ";}; printf("Island_%06d.mesh", $a[$i]); if($i!=$#a){print " \\";}; print "\n";}}' > i.lst
 
 
 mv i.lst filelist.in
+
+Adjust join.sh so that it would concatenate all the particle meshes by 1000 increments.
+In this case indices in join.sh must go over 13000, i.e.
+
+...
+foreach  i ( 0 1 2 3 4 5 6 7 8 9 )
+...
+foreach  i ( 0 1 2 3 )
+...
+
 
 Use make (in this case parallel, 4 processes):
 
 make -j4 -f Makefile_2 all
 
-Makefile_2 is for depth first mode. Each process will create particle and then go onto the next task.
-Makefile is for breadth first. It will first try to create many .pts files, then .obj files, then .kbj, etc.
+File Makefile_2 is for depth first mode. Each process will create
+particle and then go onto the next task.
+
+File Makefile is for breadth first. It will first try to create many .pts
+files, then .obj files, then .kbj, etc.
 
 To remove temporary files use:
 make -f Makefile_2 tidy 
 
-To concatenate all created .mesh files into a big .mesh file:
-meshcat Island_*.mesh Big.mesh -DCLEAN
+
+Section B) Using shell script to generate polygonal meshes
+
+Use script
+   particle_proc.sh
+
+In it, there is a line that determines which particles are to be generated:
+...
+   set ary=`perl -e '{@a=(2001..2010); print "@a\n";}'`
+...
+This will generate particles from 2001 to 2010, which are the
+particles with those gray levels in the image files.
+
+In addition to the above scripts and programs, you need programs:
+   objnf
+   polyset
+   objcat
+   obj2stl
+where:
+   objnf counts the number of polygons
+   polyset detetermines target/reduced number of polygons in a particle.
+   objcat concatenates obj files
+   obj2stl converts obj file to STL file, STL files are needed for Cubit meshing
+
+This is under development. Will have a better version soon.
+
+The makefile version puts limit of 1000 polygons regardless of how
+many polygons a particle has. This version is more flexible. See
+polyset file if you need to adjust.
+
+
 

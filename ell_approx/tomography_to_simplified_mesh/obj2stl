@@ -1,0 +1,117 @@
+#!/usr/local/bin/perl -w
+
+# WaveFront to STL converter (polygons only)
+
+use CAD::Format::STL;
+
+$pgnam="obj2stl";
+undef $BIN;
+$glab="__DEFAULT__";
+
+undef $debug;
+@j=();
+@ARGVI=@ARGV;
+for($i=0;$i<=$#ARGV;$i++){
+    if($ARGV[$i] =~ /-D(\w+)=(.*)/){
+	$$1=$2;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, $2,);
+	next;
+    }
+    if($ARGV[$i] =~ /-D(\w+)/){
+	$$1=1;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, 1,);
+	next;
+    }
+}
+foreach $i (@j){
+    splice(@ARGV,$i,1);
+}
+if(defined $debug){
+    print "ARGVI: @ARGVI\n";
+    print "ARGV: @ARGV\n";
+    print "DEFS:";
+    for($i=0;$i<=$#DEFS;$i++){
+	print " $DEFS[$i]=${$DEFS[$i]}";
+    }
+    print "\n";
+    print "DHSH:";
+    while (($key,$value) = each %DHSH){
+	print " DHSH\{$key\}=$value";
+    }
+    print "\n";
+}
+
+if($#ARGV < 1){
+  die "usage: $pgnam obj_file stl_file\n";
+}
+
+($ifile, $ofile)=@ARGV;
+
+open(IFILE, "$ifile") || die "$pgnam: $ifile $!.\n";
+
+$n=0;
+while (<IFILE>){
+    s/^\s+//;
+    s/\s+$//;
+
+    /^v\s/ && do{
+	@f=split;
+	shift @f;
+	$NXYZ[++$n]=[@f];
+	next;
+    };
+
+  /^g\s+(\S+)/ && do{
+      $glab=$1;
+      next;
+  };
+
+  /^f\s/ && do{
+      s/\/[0-9]*//g;
+      @f=split;
+      for($i=2;$i<$#f;$i++){
+	  push  @{ $TRI{$glab} }, [ @f[1,$i,$i+1] ];
+      }
+      next;
+  };
+}
+close IFILE;
+
+@PARTS = sort by_mostly_numeric keys %TRI;
+print "PARTS: @PARTS\n";
+
+die "obj2stl: no parts in the input file\n" unless @PARTS;
+
+my $stl = CAD::Format::STL->new;
+foreach my $ipart (@PARTS){
+    my $part = $stl->add_part( $ipart );
+
+    my @FACETS=();
+    foreach my $iface ( @{ $TRI{$ipart} } ){
+	my @nodes= @{ $iface };
+#	print "nodes: @nodes\n";
+	my @xyz0=@{ $NXYZ[$nodes[0]] };
+	my @xyz1=@{ $NXYZ[$nodes[1]] };
+	my @xyz2=@{ $NXYZ[$nodes[2]] };
+#	print "   xyz: @xyz0\n";
+#	print "   xyz: @xyz1\n";
+#	print "   xyz: @xyz2\n";
+	push @FACETS, [ [0,0,0], \@xyz0, \@xyz1, \@xyz2 ];
+    }
+    $part->add_facets(@FACETS);
+}
+
+if(defined($BIN)){
+    $stl->save(binary => $ofile);
+}
+else{
+    $stl->save($ofile);
+}
+
+sub by_mostly_numeric{
+    ($a <=> $b) || ($a cmp $b);
+}
