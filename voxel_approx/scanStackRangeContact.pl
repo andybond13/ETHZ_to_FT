@@ -1,0 +1,201 @@
+#!/usr/bin/perl
+
+# scan stack of 16 bit tif images, assume 1 color channel
+#
+# for every image file
+#   scan each line in each file
+#   find non-zero pixels (labels)
+#   count pixels in each particle
+#   build file list for each particle
+# end
+# for each particle
+#   print particle label, pixel count, file list
+# end
+
+# voxel-by-voxel search to create a list of centroidal contact unit vectors!
+# update 4/20/2015
+# NOTE - this is the first step & produces a list of centroidal vectors (using voxel centroid) and a list of ALL V-V contact pairs
+#      - the second is to the the output into the pairs alone
+#      - the third is batteryTomography/labeled_particles/voxel_contacts/(main.m or main_cluster.m), takes the list of pairs
+#        and calculated the centroidal vector list (using the stats centroid) and the contact-based vector list
+#      - matlab method modified to print contact area (raw # of contacting voxels)
+
+use warnings;
+use Imager;
+use IO::File;
+
+die "usage: scanImgRange.pl input_images\n" if @ARGV < 1;
+@ifiles=@ARGV;
+my (%CONTACT2,@x1,@x2,@y1,@y2,@z1,@z2,@c1,@c2);
+
+# loop over stack of image files
+my $ifilesize = @ifiles;
+
+for ($k = 0; $k < $ifilesize; $k++){    # loop over images in stack
+
+    # load image at this height (img), and at the next height (imgX)
+    my $img = Imager->new();
+    my $imgX = Imager->new();
+    my ($image_file,$image_file_next);
+    $image_file = $ifiles[$k];
+    if ($k < $ifilesize - 1) {$image_file_next = $ifiles[$k+1];}
+    $img->open(file=>$image_file) or die $img->errstr();
+    $imgX->open(file=>$image_file_next);
+    print STDERR "read image $image_file ...";
+
+#    $xsize=$img->getwidth();
+    $ysize=$img->getheight();
+    $channels=$img->getchannels();
+    die "invalid number of channles: $channels for file $image_file\n" if($channels != 1);
+
+    for($i=0;$i<$ysize;$i++){     # loop over image rows
+        # load this row of pixels (colors) and the next (colors2)
+        my (@colors,@colors2);
+	    @colors = $img->getsamples(y=>$i, type=>'16bit');
+        my $colorsize = @colors;
+        if ($i < $ysize - 1) {@colors2 =$img->getsamples(y=>$i+1, type=>'16bit');}
+
+        # ON THE NEXT IMAGE IN STACK...
+        # load this row of pixels (colorsX), the next (colorsX2), and the previous (colorsX3)
+        my (@colorsX, @colorsX2, @colorsX3);
+        if ($k < $ifilesize-1) {
+            @colorsX =$imgX->getsamples(y=>$i, type=>'16bit');
+            @colorsX2 =$imgX->getsamples(y=>$i+1, type=>'16bit');
+            @colorsX3 =$imgX->getsamples(y=>$i-1, type=>'16bit');
+        }            
+
+        for ($it=0;$it<$colorsize;$it++) { # loop over pixels in a row
+            my $j = $colors[$it]; 
+	        if($j > 0){           # color is not background, it is particle
+	        	    $PARTICLE{$j}++;  # increase count of pixels for a particle
+                $xloc{$j} += $it; # add x location for centroid calculation
+                $yloc{$j} += $i;  # add y location for centroid calculation
+                $zloc{$j} += $k;  # add z location for centroid calculation
+	        }
+            #2-D checks - check the pixel to the right and the next row
+            if ($it < $colorsize-1) {
+                my $j2 = $colors[$it+1];
+                checkAdd($j,$j2, $it,$i,$k, $it+1,$i,$k);
+            }
+            if ($i < $ysize-1) {
+                thisRow($j,$it,$colorsize, $it,$i,$k, $it,$i+1,$k, @colors2);
+            }
+            
+            #3-D checks - check (this,forward,and previous) rows in the next image in stack
+            if ($k < $ifilesize-1) {
+                thisRow($j,$it,$colorsize, $it,$i,$k, $it,$i,$k+1, @colorsX);
+
+                #row above
+                if  ($i < $ysize-1) {
+                    #this row
+                    thisRow($j,$it,$colorsize, $it,$i,$k, $it,$i+1,$k+1, @colorsX2);
+                }
+                #row below
+                if  ($i > 0) {
+                    #this row
+                    thisRow($j,$it,$colorsize, $it,$i,$k, $it,$i-1,$k+1, @colorsX3);
+                }
+            }
+	    }
+    }
+    print STDERR " done.\n";
+}
+
+# list of all particle labels
+@PARTICLES=sort by_number keys %PARTICLE;
+@CONTACTS=sort by_number keys %CONTACT2;
+
+# calculate centroid of particle -- seemingly unused
+foreach $i (@PARTICLES){
+    my $xc = $xloc{$i}/$PARTICLE{$i};
+    my $yc = $yloc{$i}/$PARTICLE{$i};
+    my $zc = $zloc{$i}/$PARTICLE{$i}; 
+}
+print "\n";
+
+if (@CONTACTS == 0){
+    print "no contacts found!\n";
+}
+print "\n";
+
+#print contact unit vectors (centroid1->centroid2)
+foreach $i (@CONTACTS){
+    @files= sort by_number keys %{ $CONTACT2{$i} };
+#    print "$i :  @files\n";
+    foreach $j (@files){
+#        print "$i $PARTICLE{$i} & $j $PARTICLE{$j} : $CONTACT2{$i}{$j}\n";
+        my $xc = ($xloc{$i}/$PARTICLE{$i}) - ($xloc{$j}/$PARTICLE{$j});
+        my $yc = ($yloc{$i}/$PARTICLE{$i}) - ($yloc{$j}/$PARTICLE{$j});
+        my $zc = ($zloc{$i}/$PARTICLE{$i}) - ($zloc{$j}/$PARTICLE{$j}); 
+        my $r = sqrt($xc*$xc + $yc*$yc + $zc*$zc);
+        my $xcr = $xc/$r;
+        my $ycr = $yc/$r;
+        my $zcr = $zc/$r;
+        print "$xcr $ycr $zcr $r\n";
+    }
+}
+
+# print all contact pairs {x1 y1 z1 x2 y2 z2}
+my $contactsize = @x1;
+for (my $it2 = 0; $it2 < $contactsize; $it2++) {
+    print "$x1[$it2] $y1[$it2] $z1[$it2] $x2[$it2] $y2[$it2] $z2[$it2] : $c1[$it2] $c2[$it2]\n";
+}
+print "\n done - $contactsize pixel-pixel contacts found\n";
+
+
+
+sub checkAdd {
+    my ($j, $j2, $x1in, $y1in, $z1in, $x2in, $y2in, $z2in) = @_;
+    if ($j != $j2 && $j2*$j != 0) {
+        #print "difference: $j vs $j2\n";
+        my $jmin = min($j,$j2);
+        my $jmax = max($j,$j2);
+        $CONTACT2{$jmin}{$jmax}++;
+        pairAdd($x1in, $y1in, $z1in, $x2in, $y2in, $z2in, $j, $j2);
+    }
+}
+
+sub pairAdd {
+    my ($x1in, $y1in, $z1in, $x2in, $y2in, $z2in, $c1in, $c2in) = @_;
+    push(@x1,$x1in);
+    push(@y1,$y1in);
+    push(@z1,$z1in);
+    push(@x2,$x2in);
+    push(@y2,$y2in);
+    push(@z2,$z2in);
+    push(@c1,$c1in);
+    push(@c2,$c2in);
+}
+
+sub thisRow {
+    my ($j,$it,$colorsize, $x1in,$y1in,$z1in, $x2in,$y2in,$z2in, @colorsZ) = @_;
+    my $j2 = $colorsZ[$it];
+    checkAdd($j,$j2, $x1in, $y1in, $z1in, $x2in, $y2in, $z2in);
+                   
+    if ($it < $colorsize-1) {
+        $j2 = $colorsZ[$it+1];
+        checkAdd($j,$j2, $x1in, $y1in, $z1in, $x2in+1, $y2in, $z2in);
+    }
+    if ($it > 0) {
+        $j2 = $colorsZ[$it-1];
+        checkAdd($j,$j2, $x1in, $y1in, $z1in, $x2in-1, $y2in, $z2in);
+    }
+
+}
+
+sub by_number {
+    $a <=> $b;
+}
+
+sub max {
+    my ($i, @l) = @_;
+    my $j = @l ? max(@l) : $i;
+    return $i > $j ? $i : $j;
+}
+
+sub min {
+    my ($i, @l) = @_;
+    my $j = @l ? min(@l) : $i;
+    return $i < $j ? $i : $j;
+}
+

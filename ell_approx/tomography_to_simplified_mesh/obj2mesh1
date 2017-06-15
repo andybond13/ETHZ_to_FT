@@ -1,0 +1,329 @@
+#!/usr/bin/perl -w
+
+# WaveFront (*obj) to mesh (for medit) converter
+# Written by:
+# Srdan Simunovic
+# Oak Ridge National Laboratory
+# email: simunovics@ornl.gov
+#
+# Your mileage may vary, use at your own risk.
+
+# WARNING
+# assumes quads in warp file for -Dwarp=warpfile, ordered consecutively
+
+
+$pgnam="obj2mesh1";
+
+undef $GROUP_LABEL;
+undef $GROUP_ORDER;
+undef $GROUP_SET;
+undef $MAT_SELECT;
+
+undef $warp;
+$DIM=3;
+$gcount=0;
+
+undef $debug;
+@j=();
+@ARGVI=@ARGV;
+for($i=0;$i<=$#ARGV;$i++){
+    if($ARGV[$i] =~ /-D(\w+)=(.*)/){
+	$$1=$2;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, $2,);
+	next;
+    }
+    if($ARGV[$i] =~ /-D(\w+)/){
+	$$1=1;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, 1,);
+	next;
+    }
+}
+foreach $i (@j){
+    splice(@ARGV,$i,1);
+}
+if(defined $debug){
+    print "ARGV: @ARGV\n";
+    print "DEFS:";
+    for($i=0;$i<=$#DEFS;$i++){
+	print " $DEFS[$i]=${$DEFS[$i]}";
+    }
+    print "\n";
+    print "DHSH:";
+    while (($key,$value) = each %DHSH){
+	print " DHSH\{$key\}=$value";
+    }
+    print "\n";
+}
+
+if($#ARGV < 1){
+  die "usage: $pgnam obj_file mesh_file(.mesh) [-Dwarp=warpfile(from markwarp)]\n";
+}
+
+#NOTE
+# -Dedge1=edge1
+# -Dedge2=edge2
+# -Dedgei=edgei
+# this can be done perl -e '{@a=(1..99);print "l @a\n";}' and add to obj file
+
+open(IFILE, "$ARGV[0]") || die "$pgnam: $ARGV[0] file does not exsist.\n";
+
+$g=0;
+$n=$quad=$tri=$edge=0;
+$gn=0;
+$gcur=1;
+
+while (<IFILE>){
+  chop;
+  @f=split;
+
+  /^v\s/ && do{@f=split;
+	       # new hack for using grep for mesh generation
+	       if(defined $gcur){
+		   if(!defined($GRP{$gcur})){
+		       $GRP{$gcur}=1;
+		   }
+		   $g=$GRP{$gcur};
+	       }
+	       # end hack
+	      $NXYZ[$n++]=[@f[1..3],$g];
+	      next;
+	    };
+
+  /^g\s+(\S+)/ && do{
+      $glab=$1;
+      $gcur=$1;
+
+      if(&is_numeric($glab)){
+	  $gcur=$glab;
+      }
+      else{
+	  unless(exists $GTRANS{$glab}){
+	      $GTRANS{$glab}=++$gcount;
+	  }
+	  $gcur=$GTRANS{$glab};
+      }	  
+
+      if(defined($GROUP_LABEL) || defined($GROUP_ORDER)){
+	  $gn=$gcur;
+	  $GRP{$gcur}=$gn;
+      }
+      if(defined($GROUP_SET)){
+	  $gcur=$GROUP_SET;
+	  $gn=$gcur;
+	  $GRP{$gcur}=$gn;
+      }
+      unless(exists $GRP{$gcur}){
+	  $gn++;
+	  $GRP{$gcur}=$gn;
+      }
+#      if(defined($debug)){
+#	  print "group $gcur = $gn\n";
+#      }
+      $GRP{$gcur}=$gn;
+      next;
+  };
+
+  /^f\s/ && do{s/\/[0-9]*//g;
+               @f=split;
+	       if($#f==4){
+		 $QUAD[$quad++]=[@f[1..4],$GRP{$gcur}];
+	       }
+	       else{
+		 for($i=2;$i<$#f;$i++){
+		   $TRI[$tri++]=[@f[1,$i,$i+1],$GRP{$gcur}];
+		 }
+	       }
+	       next;
+	     };
+
+# lines only
+#  /^l\s/ && do{s/\/[0-9]*//g;
+# Temporary fix for plotting connectivity, 04/09/03
+
+# add connectivity edges, plot fiber surface for fibers
+#  /^lc/ && do{s/\/[0-9]*//g;
+# Moved back to lines only, 04/25/03
+
+  /^l\s/ && do{s/\/[0-9]*//g;
+	       @f=split;
+	       for($i=1;$i<$#f;$i++){
+		   $EDGE[$edge++]=[$f[$i],$f[$i+1],$GRP{$gcur}];
+	       }
+	       next;
+	   };
+}
+
+if(defined($debug)){
+    print "File read.\n";
+}
+
+@GROUPS=sort by_mostly_numeric keys %GRP;
+if(defined($GROUP_ORDER)){
+    $gnum=0;
+    for($i=0;$i<@GROUPS;$i++){
+	$key=$GROUPS[$i];
+	$GRP{$key}=$gnum;
+	$gnum++;
+    }
+}
+
+
+open(OFILE, ">$ARGV[1].mesh") || die "$pgnam: cannot open $ARGV[1].mesh.\n";
+print OFILE "\# made by obj2mesh1 @ARGVI\n";
+print OFILE "\# Groups\n";
+foreach $i (@GROUPS){
+    print OFILE "\#\tgroup $i label $GRP{$i}\n";
+}
+print OFILE "MeshVersionFormatted 1\n";
+print OFILE "\n";
+
+print OFILE "Dimension\n";
+print OFILE "$DIM\n";
+print OFILE "\n";
+
+if($n>0){
+  print OFILE "Vertices\n";
+  print OFILE "$n\n";
+  for($i=0; $i<$n; $i++){
+      @a=@{ $NXYZ[$i] };
+      if(defined($MAT_SELECT)){
+	  if($a[$#a] == $MAT_SELECT){
+	      $a[$#a]=1;
+	  }
+	  else{
+	      $a[$#a]=0;
+	  }
+      }
+      $a[$#a]=$GRP{$a[$#a]} if defined($GROUP_ORDER);
+      if($DIM==2){
+	  @pxyz=@a;
+	  splice(@pxyz,2,1);
+	  printf OFILE "%10.4e %10.4e %d\n", @pxyz; 
+      }
+      else{
+	  printf OFILE "%10.4e %10.4e %10.4e %d\n", @a;
+      }
+  }
+  print OFILE "\n";
+}
+
+if(defined($debug)){
+    print "Vertices complete.\n";
+}
+
+if($quad>0){
+  print OFILE "Quadrilaterals\n";
+  print OFILE "$quad\n";
+  for($i=0; $i<$quad; $i++){
+      @a=@{ $QUAD[$i] };
+      if(defined($MAT_SELECT)){
+	  if($a[$#a] == $MAT_SELECT){
+	      $a[$#a]=1;
+	  }
+	  else{
+	      $a[$#a]=0;
+	  }
+      }
+      $a[$#a]=$GRP{$a[$#a]} if defined($GROUP_ORDER);
+      print OFILE "@a\n";
+  }
+  print OFILE "\n";
+}
+
+if(defined($debug)){
+    print "Quadrilaterals complete.\n";
+}
+
+if($tri>0){
+  print OFILE "Triangles\n";
+  print OFILE "$tri\n";
+  for($i=0; $i<$tri; $i++){
+      @a=@{ $TRI[$i] };
+      if(defined($MAT_SELECT)){
+	  if($a[$#a] == $MAT_SELECT){
+	      $a[$#a]=1;
+	  }
+	  else{
+	      $a[$#a]=0;
+	  }
+      }
+      $a[$#a]=$GRP{$a[$#a]} if defined($GROUP_ORDER);
+      print OFILE "@a\n";
+  }
+  print OFILE "\n";
+}
+
+if(defined($debug)){
+    print "Triangles complete.\n";
+}
+
+if($edge>0){
+  print OFILE "Edges\n";
+  print OFILE "$edge\n";
+  for($i=0; $i<$edge; $i++){
+      @a=@{ $EDGE[$i] };
+      if(defined($MAT_SELECT)){
+	  if($a[$#a] == $MAT_SELECT){
+	      $a[$#a]=1;
+	  }
+	  else{
+	      $a[$#a]=0;
+	  }
+      }
+      $a[$#a]=$GRP{$a[$#a]} if defined($GROUP_ORDER);
+      print OFILE "@a\n";
+  }
+  print OFILE "\n";
+}
+print OFILE "End\n";
+
+if(defined $warp){
+  open(WFILE, "$warp") || die "$pgnam: cannot open $warp.\n";
+  open(BFILE, ">$ARGV[1].bb") || die "$pgnam: cannot open $ARGV[1].bb.\n";
+
+  while(<WFILE>){
+    chop;
+    @f=split;
+    $WARP{$f[4]}=$f[10];
+  }
+  @LWARP=sort by_number keys %WARP;
+  $NWARP=@LWARP;
+  print BFILE "3 1 $NWARP 1\n";
+
+  while(@b=splice @LWARP,0,8){
+    for($i=0; $i<=$#b; $i++){
+      printf BFILE "%11.5e ", $WARP{$b[$i]};
+    }
+    print BFILE "\n";
+  } 
+}
+
+    
+
+sub by_number{
+    ($a <=> $b);
+}
+
+sub by_mostly_numeric{
+    ($a <=> $b) || ($a cmp $b);
+}
+
+sub getnum {
+    use POSIX qw(strtod);
+    my $str = shift;
+    $str =~ s/^\s+//;
+    $str =~ s/\s+$//;
+    $! = 0;
+    my($num, $unparsed) = strtod($str);
+    if (($str eq '') || ($unparsed != 0) || $!) {
+        return;
+    } else {
+        return $num;
+    } 
+} 
+
+sub is_numeric { defined scalar &getnum($_[0]) }

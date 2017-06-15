@@ -1,0 +1,178 @@
+#!/usr/bin/perl -w
+
+# GeomView to WaveFront converter (polygons only)
+
+$pgnam="off2obj";
+
+$GROUP_LABEL=1;
+undef $SHIFTF;
+
+undef $debug;
+@j=();
+@ARGVI=@ARGV;
+for($i=0;$i<=$#ARGV;$i++){
+    if($ARGV[$i] =~ /-D(\w+)=(.*)/){
+	$$1=$2;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, $2,);
+	next;
+    }
+    if($ARGV[$i] =~ /-D(\w+)/){
+	$$1=1;
+        @j=($i,@j);
+	@DEFS = (@DEFS,$1);
+	%DHSH = (%DHSH, $1, 1,);
+	next;
+    }
+}
+foreach $i (@j){
+    splice(@ARGV,$i,1);
+}
+if(defined $debug){
+    print "ARGVI: @ARGVI\n";
+    print "ARGV: @ARGV\n";
+    print "DEFS:";
+    for($i=0;$i<=$#DEFS;$i++){
+	print " $DEFS[$i]=${$DEFS[$i]}";
+    }
+    print "\n";
+    print "DHSH:";
+    while (($key,$value) = each %DHSH){
+	print " DHSH\{$key\}=$value";
+    }
+    print "\n";
+}
+
+if($#ARGV < 1){
+  die "usage: $pgnam off_file obj_file\n";
+}
+
+if(defined($SHIFTF)){
+    open(IFILE, "$SHIFTF") || die "$pgnam: $SHIFTF $!.\n";
+    while (<IFILE>){
+	s/^\s+//;
+	s/\s+$//;
+	next if /^\$/;
+	@f=split;
+	($xm,$ym,$zm)=@f;
+    }
+    close IFILE;
+}
+
+open(IFILE, "$ARGV[0]") || die "$pgnam: $ARGV[0] $!.\n";
+open(OFILE, ">$ARGV[1]") || die "$pgnam: $ARGV[1] $!.\n";
+
+$nl=0;
+while (<IFILE>){
+    s/^\s+//;
+    s/\s+$//;
+#    chop;
+    @f=split;
+    $nl++;
+
+    next if $nl==1;
+    $nl==2 && do{
+	$nn=$f[0];
+	$ne=$f[1];
+	$nn1=3;
+	$nn2=$nn+2;
+	$ne1=$nn2+1;
+	$ne2=$nn2+$ne;
+	next;
+    };
+
+    $nl <= $nn2 && $nl >= $nn1 && do{
+	$vi++;
+	$vkey=join(':',@f);   # check for nodes with the same coordinates
+	if(exists($VLAB{$vkey})){
+	    $VTRANS{$vi}=$VLAB{$vkey};     # translation number using original numbering
+	    print "duplicate node $vi\n" if defined $debug;
+	}
+	else{
+	    $vr++;    # new numbering
+	    $VLAB{$vkey}=$vi;
+	    if(defined($SHIFTF)){
+		$f[0]+=$xm;
+		$f[1]+=$ym;
+		$f[2]+=$zm;
+#		print "xm: $xm ym: $ym zm: $zm\n";
+	    }
+	    print OFILE "v @f\n";
+	    $VNUM{$vi}=$vr;   # translation for new numbering
+	}
+	next;
+    };
+    $nl==$ne1 && do{
+	print OFILE "g $GROUP_LABEL\n";
+    };
+    $nl <= $ne2 && $nl >= $ne1 && do{
+	shift @f;
+	for($i=0;$i<@f;$i++){
+	    $f[$i]++;
+	}
+	@f1=@f;
+	for($i=0;$i<@f;$i++){
+	    if(exists($VTRANS{$f[$i]})){
+		$f[$i]=$VTRANS{$f[$i]};
+	    }
+	}
+	@f=&unique(@f);
+	if(@f<3){  # skip bad polygons
+	    print "bad triangle: @f1 : @f\n" if defined $debug;
+	    next;
+	}
+	for($i=0;$i<@f;$i++){
+	    $f[$i]=$VNUM{$f[$i]};
+	}
+
+#	print OFILE "f @f\n";
+
+
+
+	if(@f<=4){
+	    @fs=sort by_number @f;   # check for repeated faces
+	    $fkey=join(':',@fs);
+	    if(exists($FLAB{$fkey})){
+		print "repeated face @f\n" if defined $debug;
+		next;
+	    }
+	    else{
+		$FLAB{$fkey}++;
+	    }
+	    print OFILE "f @f\n";
+	}
+	else{
+#	    print "triangulating @f\n";
+	    for($i=1;$i<$#f;$i++){
+		@tri=@f[0,$i,$i+1];
+
+		@fs=sort by_number @tri;    # check for repeated faces
+		$fkey=join(':',@fs);
+		if(exists($FLAB{$fkey})){
+		    print "repeated tri @tri\n" if defined $debug;
+		    next;
+		}
+		else{
+		    $FLAB{$fkey}++;
+		}
+		print OFILE "f @tri\n";
+	    }
+	}
+	next;
+    };
+}
+
+close OFILE;
+
+sub unique{
+    my %saw;
+    my @un;
+    undef %saw;
+    @un = grep(!$saw{$_}++, @_);
+    return @un;
+}
+
+sub by_number {
+    $a <=> $b;
+}

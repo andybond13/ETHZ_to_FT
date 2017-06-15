@@ -1,0 +1,8 @@
+Andrew Stershic 3/5/2014
+
+This directory txt_ft_files is the result of the voxel-voxel contact finder: scanStackRangeContact.pl. If two particles are determined to have adjacent voxels, they are recorded.
+
+The format is:
+<unit vector: x,y,z> distance
+
+where the unit vector is between the centroids of two adjacent particles and distance is the distance between the two centroids.

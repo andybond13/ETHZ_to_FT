@@ -1,0 +1,7 @@
+Andrew Stershic 4/23/2014
+
+This directory ell_centroid_files is the result of the ellipsoid centroid script (fit_script_centroid.m) and the ellipsoid contact finder: scanStackRangeContact.pl. All adjacent voxel pairs are recorded
+
+The format is:
+<unit vector: x,y,z> length #part1 #part2
+

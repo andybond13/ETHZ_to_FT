@@ -1,0 +1,39 @@
+Process images to create image.idx file that is used for Makefile
+scanStackRange.pl  A_remove_island_2000_labels*.tif --verbose
+
+Figure out how many particles are in the image files:
+tail -1 image.idx | awk '{print $1}'
+2941
+So, in this case there are 2941 particles.
+
+Now create list that Makefile will use for geometry generation. There are two options, shuffled and unshuffled list. Unshuffled is better for tracking progress. Shuffled is better for speed if parallel make execution is used.
+
+rm -f i.lst
+
+Unshuffled:
+perl -e '{@a=(1..2941);for($i=0;$i<@a;$i++){if($i==0){print "meshfiles = ";}; printf("Island_%06d.mesh", $a[$i]); if($i!=$#a){print " \\";}; print "\n";}}' > i.lst
+
+Shuffled:
+In case of parallel make execution we do not want simultaneous reading by different processes of the same tif files, because particles are numbered as they are layed down in the sample so that particles with similar id share similar z coordinates and therefore are specified in the same image files.
+You need to have perl module:
+List::Util
+installed.
+
+perl -MList::Util='shuffle' -e '{@a=shuffle((1..2941));for($i=0;$i<@a;$i++){if($i==0){print "meshfiles = ";}; printf("Island_%06d.mesh", $a[$i]); if($i!=$#a){print " \\";}; print "\n";}}' > i.lst
+
+
+mv i.lst filelist.in
+
+Use make (in this case parallel, 4 processes):
+
+make -j4 -f Makefile_2 all
+
+Makefile_2 is for depth first mode. Each process will create particle and then go onto the next task.
+Makefile is for breadth first. It will first try to create many .pts files, then .obj files, then .kbj, etc.
+
+To remove temporary files use:
+make -f Makefile_2 tidy 
+
+To concatenate all created .mesh files into a big .mesh file:
+meshcat Island_*.mesh Big.mesh -DCLEAN
+
