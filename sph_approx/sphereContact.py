@@ -2,6 +2,8 @@ import os
 import math
 import sys
 
+#run: python sphereContact.py *.txt
+
 def writeContacts(outfile, idpair, unitvec,radpair,delta,area):
     with open(outfile,'w') as f:
         for i in range(0, len(idpair)):
