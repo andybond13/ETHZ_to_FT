@@ -2,10 +2,10 @@ import os
 import math
 import sys
 
-def writeContacts(outfile, idpair, unitVec,radpair):
+def writeContacts(outfile, idpair, unitvec,radpair,delta,area):
     with open(outfile,'w') as f:
         for i in range(0, len(idpair)):
-            print '{} {} {} {} {} {} {} {} {}'.format(idpair[i][0], idpair[i][1], unitvec[i][0], unitvec[i][1], unitvec[i][2], radpair[i][0], radpair[i][1], delta[i], area[i])
+            f.write('{} {} {} {} {} {} {} {} {}\n'.format(idpair[i][0], idpair[i][1], unitvec[i][0], unitvec[i][1], unitvec[i][2], radpair[i][0], radpair[i][1], delta[i], area[i]) )
     return
 
 def calcDistance(cI, cJ):
@@ -94,7 +94,7 @@ def main(files,tag):
         id,rad,centroid=readFile(file)
 
         idpair,unitvec,area,delta,radpair = findContacts(id, rad, centroid)
-        writeContacts(outfile, idpair, unitVec, radpair) 
+        writeContacts(outfile, idpair, unitvec, radpair, delta, area) 
     return
 
 tag = ''
