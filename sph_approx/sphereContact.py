@@ -3,6 +3,7 @@ import math
 import sys
 
 #run: python sphereContact.py *.txt
+#output: id1 id2 vx vy vz rad1 rad2 delta area
 
 def writeContacts(outfile, idpair, unitvec,radpair,delta,area):
     with open(outfile,'w') as f:
