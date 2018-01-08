@@ -31,10 +31,30 @@ def reduce_dimension(data):
         data2d[i,2] = w 
     return data2d 
 
-def calculate_N(data, dimension):
+def kronecker(delta_dimension, data_dimension):
 
-    n = data.shape[0]
-    assert( data.shape[1] == dimension + 1 )
+    if (delta_dimension == 1):
+        delta = 1
+
+    elif (delta_dimension == 2):
+        delta = np.zeros( (data_dimension, data_dimension) )
+        for i in range(0, data_dimension):
+            delta[i,i] = 1
+            
+    elif (delta_dimension == 3):
+        delta = np.array( (data_dimension, data_dimension, data_dimension) )
+        for i in range(0, data_dimension):
+            delta[i,i,i] = 1
+
+    elif (delta_dimension == 4):
+        delta = np.ndarray( (data_dimension, data_dimension, data_dimension, data_dimension) )
+        delta[:,:,:,:] = 0
+        for i in range(0, data_dimension):
+            delta[i,i,i,i] = 1
+
+    return delta
+
+def calculate_N(data, dimension, n):
 
     #N0
     N0 = 1
@@ -47,6 +67,7 @@ def calculate_N(data, dimension):
 
     #N4
     N4 = np.ndarray( (dimension, dimension, dimension, dimension) )
+    N4[:,:,:,:] = 0
     for i in range(0, dimension):
         for j in range(0, dimension):
             for k in range(0, dimension):
@@ -68,10 +89,13 @@ def calc_FT(files, dimension, weighted):
             print "*Reducing data dimension"
             data = reduce_dimension(data)
 
+        n = data.shape[0]
+        assert( data.shape[1] == dimension + 1 )
+
         #calculate fabric tensors of first kind (moment tensors, N)
-        N0, N2, N4 = calculate_N(data, dimension)
+        N0, N2, N4 = calculate_N(data, dimension, n)
         #calculate fabric tensors of first kind (fabric tensors, F)
-#        F0, F2, F4 = calculate_F(data)
+        F0, F2, F4 = calculate_F(N0, N2, N4, dimension, n)
         #calculate fabric tensors of first kind (deviator tensors, D)
 #        D0, D2, D4 = calculate_D(data)
 
