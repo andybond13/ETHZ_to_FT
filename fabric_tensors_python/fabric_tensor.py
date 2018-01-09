@@ -67,10 +67,6 @@ def calculate_N(data, dimension, n):
     N4 = np.einsum('ai,aj,ak,al->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension]) / n
     assert( abs(np.trace(np.trace(N4)) - 1.0) < 1e-4)
 
-#    print "N0",N0
-#    print "N2",N2
-#    print "N4",N4
-
     return N0, N2, N4
 
 def calculate_F(N0, N2, N4, dimension, n):
@@ -88,10 +84,6 @@ def calculate_F(N0, N2, N4, dimension, n):
     dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
     F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl) #3d formula 
 
-#    print "F0",F0
-#    print "F2",F2
-#    print "F4",F4
-
     return F0, F2, F4
 
 def calculate_D(N0, N2, N4, dimension, n):
@@ -108,10 +100,6 @@ def calculate_D(N0, N2, N4, dimension, n):
     dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
     dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
     D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl) #3d formula 
-
-#    print "D0",D0
-#    print "D2",D2
-#    print "D4",D4
 
     return D0, D2, D4
 
