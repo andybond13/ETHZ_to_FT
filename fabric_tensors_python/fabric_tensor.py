@@ -60,23 +60,16 @@ def calculate_N(data, dimension, n):
     N0 = 1
 
     #N2
-    N2 = np.zeros( (dimension, dimension) )
-    for i in range(0, dimension):
-        for j in range(0, dimension):
-            N2[i,j] = np.dot(data[:,i], data[:,j]) / n
+    N2 = np.einsum('ai,aj->ij',data[:,0:dimension],data[:,0:dimension]) / n
+    assert( abs(np.trace(N2) - 1.0) < 1e-4)
 
     #N4
-    N4 = np.ndarray( (dimension, dimension, dimension, dimension) )
-    N4[:,:,:,:] = 0
-    for i in range(0, dimension):
-        for j in range(0, dimension):
-            for k in range(0, dimension):
-                for l in range(0, dimension):
-                        N4[i,j,k,l] = np.dot( np.multiply(data[:,i], data[:,j]) , np.multiply(data[:,k], data[:,l]) ) / n
+    N4 = np.einsum('ai,aj,ak,al->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension]) / n
+    assert( abs(np.trace(np.trace(N4)) - 1.0) < 1e-4)
 
-    print "N0",N0
-    print "N2",N2
-    print "N4",N4
+#    print "N0",N0
+#    print "N2",N2
+#    print "N4",N4
 
     return N0, N2, N4
 
@@ -84,6 +77,8 @@ def calc_FT(files, dimension, weighted):
     for filename in files:
         print filename
         data = read_file(filename)
+
+        assert( data.shape[1] == 4 )
 
         if (dimension == 2):
             print "*Reducing data dimension"
