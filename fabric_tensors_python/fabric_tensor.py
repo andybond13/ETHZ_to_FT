@@ -73,6 +73,51 @@ def calculate_N(data, dimension, n):
 
     return N0, N2, N4
 
+def calculate_F(N0, N2, N4, dimension, n):
+
+    #F0
+    F0 = N0
+
+    #F2
+    d2 = kronecker(2, dimension)
+    F2 = 15.0/2.0 * (N2 - 1.0/5.0 * d2) #3d formula 
+    assert( abs(np.trace(F2) - 3.0) < 1e-4)
+
+    #F4
+    dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
+    dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
+    F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl) #3d formula 
+
+#    print "F0",F0
+#    print "F2",F2
+#    print "F4",F4
+
+    return F0, F2, F4
+
+def calculate_D(N0, N2, N4, dimension, n):
+
+    #D0
+    D0 = N0
+
+    #F2
+    d2 = kronecker(2, dimension)
+    D2 = 15.0/2.0 * (N2 - 1.0/3.0 * d2) #3d formula 
+    assert( abs(np.trace(D2)) < 1e-4)
+
+    #F4
+    dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
+    dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
+    D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl) #3d formula 
+
+#    print "D0",D0
+#    print "D2",D2
+#    print "D4",D4
+
+    return D0, D2, D4
+
+def calc_statistical_significance(D2, D4):
+    return
+
 def calc_FT(files, dimension, weighted):
     for filename in files:
         print filename
@@ -92,12 +137,16 @@ def calc_FT(files, dimension, weighted):
         #calculate fabric tensors of first kind (fabric tensors, F)
         F0, F2, F4 = calculate_F(N0, N2, N4, dimension, n)
         #calculate fabric tensors of first kind (deviator tensors, D)
-#        D0, D2, D4 = calculate_D(data)
+        D0, D2, D4 = calculate_D(N0, N2, N4, dimension, n)
+
+#        print "N2 = ",N2
+#        print "F2 = ",F2
+#        print "D2 = ",D2
 
         #calculate statistical significance
-        #**********  
+        calc_statistical_significance(D2, D4) 
  
-    return
+    return N0,N2,N4, F0,F2,F4, D0,D2,D4
 
 
 if __name__ == "__main__":
