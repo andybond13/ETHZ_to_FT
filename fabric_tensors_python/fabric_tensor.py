@@ -2,6 +2,7 @@
 
 import getopt
 import numpy as np
+from scipy.stats import chi2
 import sys
 
 def read_file(filename):
@@ -119,23 +120,28 @@ def calc_statistical_significance(D2, D4, dimension, n):
 
     if (dimension == 3):
         Dij_Dij = np.einsum('ij,ij->', D2, D2)
-        lambda2 = 2.0*n/15.0 * Dij_Dij 
-#        stat2 =  
+        stat2 = 2.0*n/15.0 * Dij_Dij
+        p2 = chi2.cdf(stat2, 5)
 
         Dijkl_Dijkl = np.einsum('ijkl,ijkl->', D4, D4)
         Dijkl_Dijkm_Dlm = np.einsum('ijkl,ijkm,lm->', D4, D4, D2)
-        lambda4 = 8.0*n/315.0 * (Dijkl_Dijkl - 8.0/11.0*Dijkl_Dijkm_Dlm)
-#        stat4 =  
+        stat4 = 8.0*n/315.0 * (Dijkl_Dijkl - 8.0/11.0*Dijkl_Dijkm_Dlm)
+        p4 = chi2.cdf(stat4, 9)
+ 
     elif (dimension == 2):
         Dij_Dij = np.einsum('ij,ij->', D2, D2)
-        lambda2 = n/4.0 * Dij_Dij 
-#        stat2 =  
+        stat2 = n/4.0 * Dij_Dij
+        p2 = chi2.cdf(stat2, 2)
 
         Dijkl_Dijkl = np.einsum('ijkl,ijkl->', D4, D4)
-        lambda4 = n/16.0 * Dijkl_Dijkl
-#        stat4 =  
+        stat4 = n/16.0 * Dijkl_Dijkl
+        p4 = chi2.cdf(stat4, 2)
+
+    #p-values: closer to 1 = more significant. Desire > 95,99,99.5% significance.
+    print "F/D2 Statistic: {}, P-Value = {}".format(stat2, p2) 
+    print "F/D4 Statistic: {}, P-Value = {}".format(stat4, p4) 
     
-    return
+    return p2,p4
 
 def calc_FT(files, dimension, weighted):
     for filename in files:
