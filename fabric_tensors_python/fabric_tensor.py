@@ -76,13 +76,19 @@ def calculate_F(N0, N2, N4, dimension, n):
 
     #F2
     d2 = kronecker(2, dimension)
-    F2 = 15.0/2.0 * (N2 - 1.0/5.0 * d2) #3d formula 
-    assert( abs(np.trace(F2) - 3.0) < 1e-4)
+    if (dimension == 3):
+        F2 = 15.0/2.0 * (N2 - 1.0/5.0 * d2)
+    elif (dimension == 2):
+        F2 = 4.0 * (N2 - 1.0/4.0 * d2)
+    assert( abs(np.trace(F2) - dimension) < 1e-4)
 
     #F4
     dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
     dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
-    F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl) #3d formula 
+    if (dimension == 3):
+        F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl)
+    elif (dimension == 2):
+        F4 = 16.0 * (N4 - 3.0/4.0 * dij_N2kl + 1.0/16.0 * dij_dkl)
 
     return F0, F2, F4
 
