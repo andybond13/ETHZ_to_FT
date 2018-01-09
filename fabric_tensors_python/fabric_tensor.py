@@ -99,17 +99,42 @@ def calculate_D(N0, N2, N4, dimension, n):
 
     #F2
     d2 = kronecker(2, dimension)
-    D2 = 15.0/2.0 * (N2 - 1.0/3.0 * d2) #3d formula 
+    if (dimension == 3): 
+        D2 = 15.0/2.0 * (N2 - 1.0/3.0 * d2)
+    elif (dimension == 2): 
+        D2 = 4.0 * (N2 - 1.0/2.0 * d2)
     assert( abs(np.trace(D2)) < 1e-4)
 
     #F4
     dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
     dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
-    D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl) #3d formula 
+    if (dimension == 3): 
+        D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl)
+    elif (dimension == 2): 
+        D4 = 16.0 * (N4 - dij_N2kl + 1.0/8.0 * dij_dkl)
 
     return D0, D2, D4
 
-def calc_statistical_significance(D2, D4):
+def calc_statistical_significance(D2, D4, dimension, n):
+
+    if (dimension == 3):
+        Dij_Dij = np.einsum('ij,ij->', D2, D2)
+        lambda2 = 2.0*n/15.0 * Dij_Dij 
+#        stat2 =  
+
+        Dijkl_Dijkl = np.einsum('ijkl,ijkl->', D4, D4)
+        Dijkl_Dijkm_Dlm = np.einsum('ijkl,ijkm,lm->', D4, D4, D2)
+        lambda4 = 8.0*n/315.0 * (Dijkl_Dijkl - 8.0/11.0*Dijkl_Dijkm_Dlm)
+#        stat4 =  
+    elif (dimension == 2):
+        Dij_Dij = np.einsum('ij,ij->', D2, D2)
+        lambda2 = n/4.0 * Dij_Dij 
+#        stat2 =  
+
+        Dijkl_Dijkl = np.einsum('ijkl,ijkl->', D4, D4)
+        lambda4 = n/16.0 * Dijkl_Dijkl
+#        stat4 =  
+    
     return
 
 def calc_FT(files, dimension, weighted):
@@ -138,7 +163,7 @@ def calc_FT(files, dimension, weighted):
 #        print "D2 = ",D2
 
         #calculate statistical significance
-        calc_statistical_significance(D2, D4) 
+        calc_statistical_significance(D2, D4, dimension, n) 
  
     return N0,N2,N4, F0,F2,F4, D0,D2,D4
 
