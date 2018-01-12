@@ -10,6 +10,14 @@ def read_file(filename):
     #x,y,z, weight
     return A
 
+def evaluate_FT(FT, vec):
+    if isinstance(FT, int):
+        return 1
+    elif ( len(FT.shape) == 2):
+        return np.einsum('ij,i,j->',FT,vec,vec)
+    elif ( len(FT.shape) == 4):
+        return np.einsum('ijkl,i,j,k,l->',FT,vec,vec,vec,vec)
+
 def reduce_dimension(data):
     #reduce 3d data (x,y,z) into 2d data (r,z)
     #assumed independent dimension = z, reduced dimensions = x,y
@@ -159,19 +167,23 @@ def calc_FT(files, dimension, weighted):
 
         #calculate fabric tensors of first kind (moment tensors, N)
         N0, N2, N4 = calculate_N(data, dimension, n)
+        N = [N0, N2, N4]
         #calculate fabric tensors of first kind (fabric tensors, F)
         F0, F2, F4 = calculate_F(N0, N2, N4, dimension, n)
+        F = [F0, F2, F4]
         #calculate fabric tensors of first kind (deviator tensors, D)
         D0, D2, D4 = calculate_D(N0, N2, N4, dimension, n)
+        D = [D0, D2, D4]
 
 #        print "N2 = ",N2
 #        print "F2 = ",F2
 #        print "D2 = ",D2
 
         #calculate statistical significance
-        calc_statistical_significance(D2, D4, dimension, n) 
+        p2,p4 = calc_statistical_significance(D2, D4, dimension, n)
+        p = [p2,p4] 
  
-    return N0,N2,N4, F0,F2,F4, D0,D2,D4
+    return N, F, D, p, data
 
 
 if __name__ == "__main__":
