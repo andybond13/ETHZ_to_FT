@@ -18,28 +18,6 @@ def evaluate_FT(FT, vec):
     elif ( len(FT.shape) == 4):
         return np.einsum('ijkl,i,j,k,l->',FT,vec,vec,vec,vec)
 
-def reduce_dimension(data):
-    #reduce 3d data (x,y,z) into 2d data (r,z)
-    #assumed independent dimension = z, reduced dimensions = x,y
-    shape3d = data.shape
-    shape2d = (shape3d[0], 3)    #r,z,w
-    data2d = np.zeros(shape2d)
-    assert(shape3d[1] == 3 or shape3d[1] == 4)
-
-    for i in range(0, shape2d[0]):
-        x = data[i,0]
-        y = data[i,1]
-        z = data[i,2]
-        if (shape3d[1] == 3):
-            w = 1.0
-        elif (shape3d[1] == 4):
-            w = data[i,3]
-        r = np.sqrt( np.multiply(x,x) + np.multiply(y,y) ) 
-        data2d[i,0] = r 
-        data2d[i,1] = z 
-        data2d[i,2] = w 
-    return data2d 
-
 def kronecker(delta_dimension, data_dimension):
 
     if (delta_dimension == 1):
@@ -157,10 +135,6 @@ def calc_FT(files, dimension, weighted):
         data = read_file(filename)
 
         assert( data.shape[1] == 4 )
-
-        if (dimension == 2):
-            print "*Reducing data dimension"
-            data = reduce_dimension(data)
 
         n = data.shape[0]
         assert( data.shape[1] == dimension + 1 )
