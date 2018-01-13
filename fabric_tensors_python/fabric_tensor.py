@@ -134,9 +134,11 @@ def calc_FT(files, dimension, weighted):
         print filename
         data = read_file(filename)
 
-        assert( data.shape[1] == 4 )
-
         n = data.shape[0]
+
+        if (data.shape[1] == dimension):
+            #add weight
+            data = np.append(data, np.zeros((n,1)), 1)
         assert( data.shape[1] == dimension + 1 )
 
         #calculate fabric tensors of first kind (moment tensors, N)

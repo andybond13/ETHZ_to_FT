@@ -95,31 +95,35 @@ def plot_3d_polar2d(F, data, deform=1):
 
     return
 
-def plot_2d():
-    #Plot
-    r = np.zeros( len(theta) )
-    for i in range(0, len(r)):
-        angle = theta[i]
-        vec = [math.cos(angle), math.sin(angle)]
-        r[i] = evaluate_FT(F2, vec)
+def plot_2d(F, data, deform=1):
+
+    #create sampling 'mesh'
+    nTheta = 720
+    theta = np.linspace(0, 2*math.pi, nTheta+1)
+    r = np.zeros( theta.shape )
+    rad = np.ones( theta.shape )
+
+    #evaluate FT at mesh
+    for j in range(0, len(theta)):
+        thisTheta = theta[j]
+        vec = [ math.cos(thisTheta), math.sin(thisTheta)] 
+        r[j] = evaluate_FT(F, vec)
+            
+    #deform mesh
+    if (deform == 1):
+        rad = np.multiply(rad, r)
+
     fig = plt.figure(1)
     ax = plt.subplot(111, projection='polar')
-    ax.plot(theta, r)
-    #raw vec plot (2D only -- replace with bar chart rose plot)
-    nSample = 1000
-    for i in range(0, nSample): #data.shape[0]):
-        vec = data[i,:]
-        angle = np.arctan2(vec[0], vec[1]) 
-        ax.plot( (0,angle), (0,1) , 'k', alpha=1.0/math.sqrt(nSample))
-        ax.plot( (0,angle+math.pi), (0,1) , 'k', alpha=1.0/math.sqrt(nSample))
-    ax.grid(True)
-
-    ax.set_rmax(2)
-#    ax.set_rticks([0.5, 1, 1.5, 2])  # less radial ticks
-    ax.set_rlabel_position(-22.5)  # get radial labels away from plotted line
-    ax.grid(True)
+    ax.set_aspect('equal')
+    surf = ax.plot(theta, r, 'r') 
+    ax.set_theta_direction(-1)
+    ax.set_theta_zero_location('N')
     ax.autoscale()
+    ax.set_xlabel(r'$\theta$')
+
     plt.show()
+
 
     return
 
@@ -132,8 +136,11 @@ def plot_FT(filename, dimension, weighted):
     D0,D2,D4 = D
     p2,p4 = p
 
-    plot_3d(F4, data, deform=1)
-    plot_3d_polar2d(F4, data)
+    if dimension == 2:
+        plot_2d(F2, data, deform=1)
+    elif dimension == 3:
+        plot_3d(F4, data, deform=1)
+        plot_3d_polar2d(F4, data)
 
     return 
 
