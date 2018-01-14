@@ -12,7 +12,7 @@ import numpy as np
 import sys
 from fabric_tensor import *
 
-def plot_3d(F, data, deform=1):
+def plot_3d(F, data, deform=1, plot='yes'):
 
     #create sampling 'mesh'
     nTheta = 144
@@ -52,11 +52,13 @@ def plot_3d(F, data, deform=1):
 
     scalarMap.set_array(r)
     fig.colorbar(scalarMap) 
-    plt.show()
 
-    return
+    if plot == 'yes': 
+        plt.show()
 
-def plot_3d_polar2d(F, data, deform=1):
+    return ax
+
+def plot_3d_polar2d(F, data, deform=1, plot='yes'):
 
     #create sampling 'mesh'
     nTheta = 144
@@ -94,11 +96,12 @@ def plot_3d_polar2d(F, data, deform=1):
     ax.autoscale()
     ax.set_xlabel(r'$\phi$')
 
-    plt.show()
+    if plot == 'yes': 
+        plt.show()
 
-    return
+    return ax
 
-def plot_2d(F, data, deform=1):
+def plot_2d(F, data, deform=1, plot='yes'):
 
     #create sampling 'mesh'
     nTheta = 720
@@ -123,10 +126,10 @@ def plot_2d(F, data, deform=1):
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
 
-    plt.show()
+    if plot == 'yes': 
+        plt.show()
 
-
-    return
+    return ax
 
 def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
     #adapted from Joe Kington: https://stackoverflow.com/questions/16264837/how-would-one-add-a-colorbar-to-this-example
@@ -160,7 +163,9 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
     bins = np.linspace(0, 2*math.pi, bins+1) #+ math.pi / bins
 
     azimuths = np.arctan2(data[:,1], data[:,0]) #note, this is right. It is arctan2(y,x) 
-    weight = data[:,-1] 
+    weight = data[:,-1]
+    wSum = np.sum(weight)
+    print wSum 
 
     azimuths = np.asanyarray(azimuths)
     if color_by == 'count':
@@ -180,12 +185,13 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
     azimuths[azimuths > math.pi*2] -= math.pi*2
     azimuths[azimuths < 0] += math.pi*2
     counts, edges = np.histogram(azimuths, range=[0, math.pi*2], bins=bins, weights=weight)
+    print counts
     if z is not None:
         idx = np.digitize(azimuths, edges)
         z = np.array([color_by(z[idx == i]) for i in range(1, idx.max() + 1)])
         z = np.ma.masked_invalid(z)
     cmap = plt.get_cmap('jet')
-    coll = colored_bar(edges[:-1], counts, z=z, width=np.diff(edges), ax=ax, cmap=cmap)
+    coll = colored_bar(edges[:-1], counts/wSum, z=z, width=np.diff(edges), ax=ax, cmap=cmap)
 
     ax.set_aspect('equal')
     ax.autoscale()
@@ -220,8 +226,8 @@ def plot_FT(filename, dimension, weighted):
     p2,p4 = p
 
     if dimension == 2:
-        plot_2d(F4, data, deform=1)
-        rose(data, bins=32, color_by='count')
+        ax = plot_2d(F4, data, deform=1, plot='no')
+        rose(data, ax=ax, bins=32, color_by='count')
     elif dimension == 3:
         plot_3d(F4, data, deform=1)
         plot_3d_polar2d(F4, data)
