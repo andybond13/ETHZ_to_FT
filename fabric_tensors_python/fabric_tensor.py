@@ -141,8 +141,6 @@ def calc_fractional_anisotropy(F2, dimension):
 
     eigs = np.linalg.eigvals(F2)
 
-    print eigs
-
     if (dimension == 2):
         a = np.max(eigs) 
         b = np.min(eigs) 
