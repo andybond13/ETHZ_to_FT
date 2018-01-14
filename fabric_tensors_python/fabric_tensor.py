@@ -1,6 +1,7 @@
 #!/sw/bin/python2.7
 
 import getopt
+import math
 import numpy as np
 from scipy.stats import chi2
 import sys
@@ -43,15 +44,22 @@ def kronecker(delta_dimension, data_dimension):
 
 def calculate_N(data, dimension, n):
 
+    weight = data[:,dimension] 
+    wSum = np.sum(weight)
+    assert(wSum > 0)
+
+    if (all(weight == 1.0)):
+        assert(wSum == n)
+
     #N0
     N0 = 1
 
     #N2
-    N2 = np.einsum('ai,aj->ij',data[:,0:dimension],data[:,0:dimension]) / n
+    N2 = np.einsum('ai,aj,a->ij',data[:,0:dimension],data[:,0:dimension],weight) / wSum
     assert( abs(np.trace(N2) - 1.0) < 1e-4)
 
     #N4
-    N4 = np.einsum('ai,aj,ak,al->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension]) / n
+    N4 = np.einsum('ai,aj,ak,al,a->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],weight) / wSum
     assert( abs(np.trace(np.trace(N4)) - 1.0) < 1e-4)
 
     return N0, N2, N4
@@ -129,6 +137,29 @@ def calc_statistical_significance(D2, D4, dimension, n):
     
     return p2,p4
 
+def calc_fractional_anisotropy(F2, dimension):
+
+    eigs = np.linalg.eigvals(F2)
+
+    print eigs
+
+    if (dimension == 2):
+        a = np.max(eigs) 
+        b = np.min(eigs) 
+        FA = math.sqrt(1.0 - (b*b)/(a*a)) 
+
+    elif (dimension == 3):
+        e0 = eigs[0]
+        e1 = eigs[1]
+        e2 = eigs[2]
+        num = math.sqrt( math.pow(e0-e1,2) + math.pow(e1-e2,2) + math.pow(e2-e0,2) )
+        denom = 2.0 * math.sqrt( e0*e0 + e1*e1 + e2*e2 )
+        FA = num/denom 
+
+    print "Fractional Anisotropy = {}".format(FA)
+
+    return FA
+
 def calc_FT(files, dimension, weighted):
     for filename in files:
         print filename
@@ -138,7 +169,7 @@ def calc_FT(files, dimension, weighted):
 
         if (data.shape[1] == dimension):
             #add weight
-            data = np.append(data, np.zeros((n,1)), 1)
+            data = np.append(data, np.ones((n,1)), 1)
         assert( data.shape[1] == dimension + 1 )
 
         #calculate fabric tensors of first kind (moment tensors, N)
@@ -157,7 +188,9 @@ def calc_FT(files, dimension, weighted):
 
         #calculate statistical significance
         p2,p4 = calc_statistical_significance(D2, D4, dimension, n)
-        p = [p2,p4] 
+        p = [p2,p4]
+
+        FA = calc_fractional_anisotropy(F2, dimension) 
  
     return N, F, D, p, data
 

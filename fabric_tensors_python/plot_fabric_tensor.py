@@ -117,8 +117,6 @@ def plot_2d(F, data, deform=1):
     ax = plt.subplot(111, projection='polar')
     ax.set_aspect('equal')
     surf = ax.plot(theta, r, 'r') 
-    ax.set_theta_direction(-1)
-    ax.set_theta_zero_location('N')
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
 
@@ -137,7 +135,7 @@ def plot_FT(filename, dimension, weighted):
     p2,p4 = p
 
     if dimension == 2:
-        plot_2d(F2, data, deform=1)
+        plot_2d(F4, data, deform=1)
     elif dimension == 3:
         plot_3d(F4, data, deform=1)
         plot_3d_polar2d(F4, data)
