@@ -9,10 +9,11 @@ from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import Rectangle
 import numpy as np
+import os
 import sys
 from fabric_tensor import *
 
-def plot_3d(F, data, deform=1, plot='yes'):
+def plot_3d(F, data, deform=1, plot='yes', png=None):
 
     #create sampling 'mesh'
     nTheta = 144
@@ -53,12 +54,15 @@ def plot_3d(F, data, deform=1, plot='yes'):
     scalarMap.set_array(r)
     fig.colorbar(scalarMap) 
 
+    if png != None:
+        fig.savefig(png, dpi=300)
+
     if plot == 'yes': 
         plt.show()
 
     return ax
 
-def plot_3d_polar2d(F, data, deform=1, plot='yes'):
+def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None):
 
     #create sampling 'mesh'
     nTheta = 144
@@ -96,12 +100,16 @@ def plot_3d_polar2d(F, data, deform=1, plot='yes'):
     ax.autoscale()
     ax.set_xlabel(r'$\phi$')
 
+    if png != None:
+        polarPng = os.path.splitext(png)[0] + '_polar.png'
+        fig.savefig(polarPng, dpi=300)
+
     if plot == 'yes': 
         plt.show()
 
     return ax
 
-def plot_2d(F, data, deform=1, plot='yes'):
+def plot_2d(F, data, deform=1, plot='yes', png=None):
 
     #create sampling 'mesh'
     nTheta = 720
@@ -126,12 +134,15 @@ def plot_2d(F, data, deform=1, plot='yes'):
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
 
+    if png != None:
+        fig.savefig(png, dpi=300)
+
     if plot == 'yes': 
         plt.show()
 
     return ax
 
-def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
+def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, png=None):
     #adapted from Joe Kington: https://stackoverflow.com/questions/16264837/how-would-one-add-a-colorbar-to-this-example
     """Create a "rose" diagram (a.k.a. circular histogram).  
 
@@ -165,7 +176,6 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
     azimuths = np.arctan2(data[:,1], data[:,0]) #note, this is right. It is arctan2(y,x) 
     weight = data[:,-1]
     wSum = np.sum(weight)
-    print wSum 
 
     azimuths = np.asanyarray(azimuths)
     if color_by == 'count':
@@ -185,7 +195,6 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
     azimuths[azimuths > math.pi*2] -= math.pi*2
     azimuths[azimuths < 0] += math.pi*2
     counts, edges = np.histogram(azimuths, range=[0, math.pi*2], bins=bins, weights=weight)
-    print counts
     if z is not None:
         idx = np.digitize(azimuths, edges)
         z = np.array([color_by(z[idx == i]) for i in range(1, idx.max() + 1)])
@@ -196,6 +205,9 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean):
     ax.set_aspect('equal')
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
+
+    if png != None:
+        plt.savefig(png)
 
     plt.show()
 
@@ -216,7 +228,11 @@ def colored_bar(left, height, z=None, width=0.8, bottom=0, ax=None, **kwargs):
     ax.autoscale()
     return coll
 
-def plot_FT(filename, dimension, weighted):
+def write_FT(filename, FT):
+    FT.tofile(filename) 
+    return
+
+def plot_FT(filename, dimension, weighted, plot, raw, png, write):
     N,F,D,p,data = calc_FT([filename], dimension, weighted)
 
     #unpack
@@ -225,24 +241,44 @@ def plot_FT(filename, dimension, weighted):
     D0,D2,D4 = D
     p2,p4 = p
 
-    if dimension == 2:
-        ax = plot_2d(F4, data, deform=1, plot='no')
-        rose(data, ax=ax, bins=32, color_by='count')
-    elif dimension == 3:
-        plot_3d(F4, data, deform=1)
-        plot_3d_polar2d(F4, data)
+
+    if (plot == 'yes'):
+        if dimension == 2:
+            if raw == 'yes':
+                ax = plot_2d(F4, data, deform=1, plot='no')
+                rose(data, ax=ax, bins=32, color_by='count', png=png)
+            elif raw == 'no':
+                plot_2d(F4, data, deform=1, png=png)
+        elif dimension == 3:
+            plot_3d(F4, data, deform=1, png=png)
+            plot_3d_polar2d(F4, data, png=png)
+ 
+    if (write != None):
+        write_FT(write, F4)
 
     return 
 
 if __name__ == "__main__":
-    optlist,args = getopt.getopt(sys.argv[1:],'',longopts=['3D','3d','weighted'])
+    optlist,args = getopt.getopt(sys.argv[1:],'',longopts=['3D','3d','weighted','plot','raw','png=','write='])
     dimension = 2
     weighted = 0
+    plot = 'no'
+    raw = 'no' 
+    png = None
+    write = None 
     for item in optlist:
         if (item[0].lower() == '--3d'):
             dimension = 3 
         elif (item[0] == '--weighted'):
             weighted = 1
+        elif (item[0] == '--plot'):
+            plot = 'yes'
+        elif (item[0] == '--raw'):
+            raw = 'yes'
+        elif (item[0] == '--png'):
+            png = item[1]
+        elif (item[0] == '--write'):
+            write = item[1]
 
     for filename in args:
-        plot_FT(filename, dimension, weighted)
+        plot_FT(filename, dimension, weighted, plot, raw, png, write)
