@@ -11,6 +11,70 @@ def read_file(filename):
     #x,y,z, weight
     return A
 
+def tensor_to_vector(T):
+    #Voigt notation: represent higher-order tensor as matrix, using (assumed) symmetries
+
+    dimension = T.shape[0]
+    order = len(T.shape) 
+
+    if (order == 2):
+        #2nd-rank tensor
+        if (dimension == 2):
+            vec = np.zeros( (3,1) )
+            vec[0,0] = T[0,0]
+            vec[1,0] = T[1,1]
+            vec[2,0] = (T[0,1] + T[1,0]) * math.sqrt(0.5)
+        if (dimension == 3):
+            vec = np.zeros( (6,1) )
+            vec[0,0] = T[0,0]
+            vec[1,0] = T[1,1]
+            vec[2,0] = T[2,2]
+            vec[3,0] = (T[1,2] + T[1,2]) * math.sqrt(0.5)
+            vec[4,0] = (T[0,2] + T[2,0]) * math.sqrt(0.5)
+            vec[5,0] = (T[0,1] + T[1,0]) * math.sqrt(0.5)
+        else:
+            print "Tensor of order {}, dimension {} not supported".format(order, dimension)
+    elif (order == 4):
+        #4th-rank tensor
+        if (dimension == 2):
+            vec = np.zeros( (3,3) )
+            vec[0,0] = T[0,0,0,0]
+            vec[0,1] = T[0,0,1,1]
+            vec[1,0] = T[1,1,0,0]
+            vec[1,1] = T[1,1,1,1]
+            vec[2,0] = (T[0,1,0,0] + T[1,0,0,0]) * math.sqrt(0.5)
+            vec[2,1] = (T[0,1,1,1] + T[1,0,1,1]) * math.sqrt(0.5)
+            vec[0,2] = (T[0,0,0,1] + T[0,0,1,0]) * math.sqrt(0.5)
+            vec[1,2] = (T[1,1,0,1] + T[1,1,0,1]) * math.sqrt(0.5)
+            vec[2,2] = (T[0,1,0,1] + T[1,0,1,0] + T[0,1,1,0] + T[1,0,0,1]) * 0.5
+        if (dimension == 3):
+            vec = np.zeros( (6,6) )
+            for i in range(0,3):
+                for j in range(0,3):
+                    vec[j,i] = T[j,j,i,i]
+                vec[3,i] = (T[1,2,i,i] + T[2,1,i,i]) * math.sqrt(0.5) 
+                vec[4,i] = (T[0,2,i,i] + T[2,0,i,i]) * math.sqrt(0.5) 
+                vec[5,i] = (T[0,1,i,i] + T[1,0,i,i]) * math.sqrt(0.5) 
+                vec[i,3] = (T[i,i,1,2] + T[i,i,2,1]) * math.sqrt(0.5) 
+                vec[i,4] = (T[i,i,0,2] + T[i,i,2,0]) * math.sqrt(0.5) 
+                vec[i,5] = (T[i,i,0,1] + T[i,i,1,0]) * math.sqrt(0.5)
+            vec[3,3] = (T[1,2,1,2] + T[1,2,2,1] + T[2,1,1,2] + T[2,1,2,1]) * 0.5 
+            vec[4,4] = (T[0,2,0,2] + T[0,2,2,0] + T[2,0,0,2] + T[2,0,2,0]) * 0.5 
+            vec[5,5] = (T[0,1,0,1] + T[0,1,1,0] + T[1,0,0,1] + T[1,0,1,0]) * 0.5 
+            vec[4,3] = (T[0,2,1,2] + T[0,2,2,1] + T[2,0,1,2] + T[2,0,2,1]) * 0.5 
+            vec[3,4] = (T[1,2,0,2] + T[1,2,2,0] + T[2,1,0,2] + T[2,1,2,0]) * 0.5 
+            vec[5,3] = (T[0,1,1,2] + T[0,1,2,1] + T[1,0,1,2] + T[1,0,2,1]) * 0.5 
+            vec[3,5] = (T[1,2,0,1] + T[1,2,1,0] + T[2,1,0,1] + T[2,1,1,0]) * 0.5 
+            vec[5,4] = (T[0,1,0,2] + T[0,1,2,0] + T[1,0,0,2] + T[1,0,2,0]) * 0.5 
+            vec[4,5] = (T[0,2,0,1] + T[0,2,1,0] + T[2,0,0,1] + T[2,0,1,0]) * 0.5 
+        else:
+            print "Tensor of order {}, dimension {} not supported".format(order, dimension)
+    else:
+        print "Tensor of order {} not supported".format(order)
+        assert(1 == 0)
+
+    return vec    
+
 def evaluate_FT(FT, vec):
     if isinstance(FT, int):
         return 1
@@ -181,6 +245,11 @@ def calc_FT(files, dimension, weighted):
         D = [D0, D2, D4]
 
 #        print "N2 = ",N2
+        print "N2 vec = ",tensor_to_vector(N2)
+#        print "F2 = ",F2
+#        print "D2 = ",D2
+#        print "N4 = ",N4
+        print "N4 vec = ",tensor_to_vector(N4)
 #        print "F2 = ",F2
 #        print "D2 = ",D2
 
