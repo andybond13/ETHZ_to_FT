@@ -143,7 +143,8 @@ def calculate_F(N0, N2, N4, dimension, n):
 
     #F4
     dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
-    dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
+    #dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
+    dij_N2kl = 0.5 * (np.einsum('ij,kl->ijkl', d2, N2) + np.einsum('ij,kl->ijkl', N2, d2))#symmetrized
     if (dimension == 3):
         F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl)
     elif (dimension == 2):
@@ -166,7 +167,8 @@ def calculate_D(N0, N2, N4, dimension, n):
 
     #F4
     dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
-    dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
+    #dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
+    dij_N2kl = 0.5 * (np.einsum('ij,kl->ijkl', d2, N2) + np.einsum('ij,kl->ijkl', N2, d2))#symmetrized
     if (dimension == 3): 
         D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl)
     elif (dimension == 2): 
@@ -222,6 +224,10 @@ def calc_fractional_anisotropy(F2, dimension):
 
     return FA
 
+def check_symmetric(a, tol=1e-8):
+    #stackoverflow.com/questions/42908334
+    return np.allclose(a, a.T, atol=tol)
+
 def calc_FT(files, dimension, weighted):
     for filename in files:
         print filename
@@ -245,13 +251,22 @@ def calc_FT(files, dimension, weighted):
         D = [D0, D2, D4]
 
 #        print "N2 = ",N2
-        print "N2 vec = ",tensor_to_vector(N2)
+        print "F2 vec = ",tensor_to_vector(F2)
 #        print "F2 = ",F2
 #        print "D2 = ",D2
 #        print "N4 = ",N4
-        print "N4 vec = ",tensor_to_vector(N4)
+        print "F4 vec = ",tensor_to_vector(F4)
 #        print "F2 = ",F2
 #        print "D2 = ",D2
+        assert( check_symmetric( N2 ) ) 
+        assert( check_symmetric( F2 ) ) 
+        assert( check_symmetric( D2 ) ) 
+        assert( check_symmetric( tensor_to_vector(N4) ) )
+        assert( check_symmetric( tensor_to_vector(F4) ) )
+        assert( check_symmetric( tensor_to_vector(D4) ) )
+        assert( check_symmetric( N4 ) ) 
+        assert( check_symmetric( F4 ) ) 
+        assert( check_symmetric( D4 ) ) 
 
         #calculate statistical significance
         p2,p4 = calc_statistical_significance(D2, D4, dimension, n)
