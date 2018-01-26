@@ -46,8 +46,8 @@ if N < 20
     fprintf('N (here: %d) should be large for fitness tests\n', N);
 end
 
-test_statistic_2 = 2*N/15*(D2'*D2);
-p_2 = 1-chi2cdf(test_statistic_2,2);
+test_statistic_2 = 2*N/15*(D2'*D2)
+p_2 = 1-chi2cdf(test_statistic_2,2)
 if (p_2 < P)
 %     fprintf('p_2 < %f indicates a significant difference from a uniform distribution, so consider D2\n',P);
 else
@@ -81,10 +81,10 @@ for k=1:3
 end
 
 % Compute the test statistic
-test_statistic_4 = 8*N/315*(sum(sum(D4.^2))-8/11*test_statistic_4);
+test_statistic_4 = 8*N/315*(sum(sum(D4.^2))-8/11*test_statistic_4)
 
 % Compute the p-value
-p_4 = 1-chi2cdf(test_statistic_4,9);
+p_4 = 1-chi2cdf(test_statistic_4,9)
 if (p_4 < P)
 %     fprintf('p_4 < %f indicates that fourth order terms should be considered.\n',P);
 else

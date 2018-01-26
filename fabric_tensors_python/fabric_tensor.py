@@ -83,6 +83,8 @@ def evaluate_FT(FT, vec):
         return np.einsum('ij,i,j->',FT,vec,vec)
     elif ( len(FT.shape) == 4):
         return np.einsum('ijkl,i,j,k,l->',FT,vec,vec,vec,vec)
+    elif ( len(FT.shape) == 6):
+        return np.einsum('ijklmn,i,j,k,l,m,n->',FT,vec,vec,vec,vec,vec,vec)
 
 def symmetrize(T):
     order = len(T.shape) 
@@ -94,6 +96,8 @@ def symmetrize(T):
         key = 'ijk'
     if order == 4:
         key = 'ijkl'
+    if order == 6:
+        key = 'ijklmn'
     numCombos = math.factorial(order)
 
     Tsym = np.zeros( T.shape )
@@ -149,9 +153,13 @@ def calculate_N(data, dimension, n):
     N4 = np.einsum('ai,aj,ak,al,a->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],weight) / wSum
     assert( abs(np.trace(np.trace(N4)) - 1.0) < 1e-4)
 
-    return N0, N2, N4
+    #N6
+    N6 = np.einsum('ai,aj,ak,al,am,an,a->ijklmn',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],weight) / wSum
+    assert( abs(np.trace(np.trace(np.trace(N6))) - 1.0) < 1e-4)
 
-def calculate_F(N0, N2, N4, dimension, n):
+    return N0, N2, N4, N6
+
+def calculate_F(N0, N2, N4, N6, dimension, n):
 
     #F0
     F0 = N0
@@ -172,14 +180,23 @@ def calculate_F(N0, N2, N4, dimension, n):
     elif (dimension == 2):
         F4 = 16.0 * (N4 - 3.0/4.0 * dij_N2kl + 1.0/16.0 * dij_dkl)
 
-    return F0, F2, F4
+    #F6
+    dij_dkl_dmn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, d2) )
+    dij_dkl_N2mn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, N2) )
+    dij_N4klmn = symmetrize( np.einsum('ij,klmn->ijklmn', d2, N4) )
+    if (dimension == 3):
+        F6 = 3003.0/16.0 * (N6 - 15.0/13.0 * dij_N4klmn + 45.0/143.0 * dij_dkl_N2mn - 5.0/429.0 * dij_dkl_dmn)
+    elif (dimension == 2):
+        F6 = 64.0 * (N6 - 5.0/4.0 * dij_N4klmn + 3.0/8.0 * dij_dkl_N2mn - 1.0/64.0 * dij_dkl_dmn)
 
-def calculate_D(N0, N2, N4, dimension, n):
+    return F0, F2, F4, F6
+
+def calculate_D(N0, N2, N4, N6, dimension, n):
 
     #D0
     D0 = N0
 
-    #F2
+    #D2
     d2 = kronecker(2, dimension)
     if (dimension == 3): 
         D2 = 15.0/2.0 * (N2 - 1.0/3.0 * d2)
@@ -187,7 +204,7 @@ def calculate_D(N0, N2, N4, dimension, n):
         D2 = 4.0 * (N2 - 1.0/2.0 * d2)
     assert( abs(np.trace(D2)) < 1e-4)
 
-    #F4
+    #D4
     dij_dkl = symmetrize( np.einsum('ij,kl->ijkl', d2, d2) ) 
     dij_N2kl = symmetrize( np.einsum('ij,kl->ijkl', d2, N2) )
     if (dimension == 3): 
@@ -195,7 +212,16 @@ def calculate_D(N0, N2, N4, dimension, n):
     elif (dimension == 2): 
         D4 = 16.0 * (N4 - dij_N2kl + 1.0/8.0 * dij_dkl)
 
-    return D0, D2, D4
+    #D6
+    dij_dkl_dmn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, d2) )
+    dij_dkl_N2mn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, N2) )
+    dij_N4klmn = symmetrize( np.einsum('ij,klmn->ijklmn', d2, N4) )
+    if (dimension == 3):
+        D6 = 3003.0/16.0 * (N6 - 15.0/11.0 * dij_N4klmn + 5.0/11.0 * dij_dkl_N2mn - 5.0/231.0 * dij_dkl_dmn)
+    elif (dimension == 2):
+        D6 = 64.0 * (N6 - 3.0/2.0 * dij_N4klmn + 9.0/16.0 * dij_dkl_N2mn - 1.0/32.0 * dij_dkl_dmn)
+
+    return D0, D2, D4, D6
 
 def calc_statistical_significance(D2, D4, dimension, n):
 
@@ -264,14 +290,14 @@ def calc_FT(files, dimension, weighted):
         assert( data.shape[1] == dimension + 1 )
 
         #calculate fabric tensors of first kind (moment tensors, N)
-        N0, N2, N4 = calculate_N(data, dimension, n)
-        N = [N0, N2, N4]
+        N0, N2, N4, N6 = calculate_N(data, dimension, n)
+        N = [N0, N2, N4, N6]
         #calculate fabric tensors of first kind (fabric tensors, F)
-        F0, F2, F4 = calculate_F(N0, N2, N4, dimension, n)
-        F = [F0, F2, F4]
+        F0, F2, F4, F6 = calculate_F(N0, N2, N4, N6, dimension, n)
+        F = [F0, F2, F4, F6]
         #calculate fabric tensors of first kind (deviator tensors, D)
-        D0, D2, D4 = calculate_D(N0, N2, N4, dimension, n)
-        D = [D0, D2, D4]
+        D0, D2, D4, D6 = calculate_D(N0, N2, N4, N6, dimension, n)
+        D = [D0, D2, D4, D6]
 
 #        print "N2 = ",N2
 #        print "N2 vec = ",tensor_to_vector(N2)
@@ -294,6 +320,9 @@ def calc_FT(files, dimension, weighted):
         assert( check_symmetric( N4 ) ) 
         assert( check_symmetric( F4 ) ) 
         assert( check_symmetric( D4 ) ) 
+        assert( check_symmetric( N6 ) ) 
+        assert( check_symmetric( F6 ) ) 
+        assert( check_symmetric( D6 ) ) 
 
         #calculate statistical significance
         p2,p4 = calc_statistical_significance(D2, D4, dimension, n)

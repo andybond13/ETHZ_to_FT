@@ -53,7 +53,7 @@ I2 = makeS2(1);
 F2 = 15/2*N2 - 3/2*I2;
 
 if nargin == 2 && nargout == 2  
-  I4 = symmetrizeS4(makeS4(1));
+  I4 = symmetrizeS4(makeS4(1))
   F4 = 315/8*N4 - 105/4*symmetrizeS4(I2*N2') + 15/8*I4;
 end
 
