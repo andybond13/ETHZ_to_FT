@@ -13,7 +13,15 @@ import os
 import sys
 from fabric_tensor import *
 
-def plot_3d(F, data, deform=1, plot='yes', png=None):
+def filename(png, tag=None):
+    base = os.path.splitext(png)[0]
+    if (tag == None):
+        f = base+'.png'
+    else:
+        f = base+'_'+tag+'.png'
+    return f
+
+def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None):
 
     #create sampling 'mesh'
     nTheta = 144
@@ -52,17 +60,20 @@ def plot_3d(F, data, deform=1, plot='yes', png=None):
     ax.set_zlabel('z')
 
     scalarMap.set_array(r)
-    fig.colorbar(scalarMap) 
+    fig.colorbar(scalarMap)
+
+    if tag != None:
+        plt.title(tag) 
 
     if png != None:
-        fig.savefig(png, dpi=300)
+        fig.savefig(filename(png,tag), dpi=300)
 
     if plot == 'yes': 
         plt.show()
 
     return ax
 
-def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None):
+def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None, tag=None):
 
     #create sampling 'mesh'
     nTheta = 144
@@ -100,16 +111,18 @@ def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None):
     ax.autoscale()
     ax.set_xlabel(r'$\phi$')
 
+    if tag != None:
+        plt.title(tag) 
+
     if png != None:
-        polarPng = os.path.splitext(png)[0] + '_polar.png'
-        fig.savefig(polarPng, dpi=300)
+        fig.savefig(filename(png,tag), dpi=300)
 
     if plot == 'yes': 
         plt.show()
 
     return ax
 
-def plot_2d(F, data, deform=1, plot='yes', png=None):
+def plot_2d(F, data, deform=1, plot='yes', png=None, tag=None):
 
     #create sampling 'mesh'
     nTheta = 720
@@ -134,15 +147,18 @@ def plot_2d(F, data, deform=1, plot='yes', png=None):
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
 
+    if tag != None:
+        plt.title(tag) 
+
     if png != None:
-        fig.savefig(png, dpi=300)
+        fig.savefig(filename(png,tag), dpi=300)
 
     if plot == 'yes': 
         plt.show()
 
     return ax
 
-def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, png=None):
+def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, png=None, tag=None):
     #adapted from Joe Kington: https://stackoverflow.com/questions/16264837/how-would-one-add-a-colorbar-to-this-example
     """Create a "rose" diagram (a.k.a. circular histogram).  
 
@@ -206,8 +222,11 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
 
+    if tag != None:
+        plt.title(tag) 
+
     if png != None:
-        plt.savefig(png)
+        plt.savefig(filename(png,tag), dpi=300)
 
     plt.show()
 
@@ -241,17 +260,19 @@ def plot_FT(filename, dimension, weighted, plot, raw, png, write):
     D0,D2,D4 = D
     p2,p4 = p
 
-
     if (plot == 'yes'):
         if dimension == 2:
             if raw == 'yes':
-                ax = plot_2d(F4, data, deform=1, plot='no')
-                rose(data, ax=ax, bins=32, color_by='count', png=png)
+                ax = plot_2d(F2, data, deform=1, plot='no', png=png, tag='F2')
+                ax = plot_2d(F4, data, deform=1, plot='no', png=png, tag='F4')
+                rose(data, ax=ax, bins=32, color_by='count', png=png, tag='rose')
             elif raw == 'no':
-                plot_2d(F4, data, deform=1, png=png)
+                plot_2d(F2, data, deform=1, png=png, tag='F2')
+                plot_2d(F4, data, deform=1, png=png, tag='F4')
         elif dimension == 3:
-            plot_3d(F4, data, deform=1, png=png)
-            plot_3d_polar2d(F4, data, png=png)
+            plot_3d(F2, data, deform=1, png=png, tag='F2')
+            plot_3d(F4, data, deform=1, png=png, tag='F4')
+            plot_3d_polar2d(F4, data, png=png, tag='polar')
  
     if (write != None):
         write_FT(write, F4)
