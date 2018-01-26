@@ -4,6 +4,7 @@ import getopt
 import math
 import numpy as np
 from scipy.stats import chi2
+from sympy.utilities.iterables import multiset_permutations
 import sys
 
 def read_file(filename):
@@ -83,6 +84,28 @@ def evaluate_FT(FT, vec):
     elif ( len(FT.shape) == 4):
         return np.einsum('ijkl,i,j,k,l->',FT,vec,vec,vec,vec)
 
+def symmetrize(T):
+    order = len(T.shape) 
+    if order == 1:
+        key = 'i'
+    if order == 2:
+        key = 'ij'
+    if order == 3:
+        key = 'ijk'
+    if order == 4:
+        key = 'ijkl'
+    numCombos = math.factorial(order)
+
+    Tsym = np.zeros( T.shape )
+    permutations = []
+    for i in multiset_permutations(key):
+        combo = ''.join(i)+'->'+key
+        permutations.append(combo)
+        Tsym += 1.0/float(numCombos) * np.einsum(combo, T)
+
+    assert( len(permutations) == numCombos )
+    return Tsym
+
 def kronecker(delta_dimension, data_dimension):
 
     if (delta_dimension == 1):
@@ -142,9 +165,8 @@ def calculate_F(N0, N2, N4, dimension, n):
     assert( abs(np.trace(F2) - dimension) < 1e-4)
 
     #F4
-    dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
-    #dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
-    dij_N2kl = 0.5 * (np.einsum('ij,kl->ijkl', d2, N2) + np.einsum('ij,kl->ijkl', N2, d2))#symmetrized
+    dij_dkl = symmetrize( np.einsum('ij,kl->ijkl', d2, d2) )
+    dij_N2kl = symmetrize( np.einsum('ij,kl->ijkl', d2, N2) )
     if (dimension == 3):
         F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl)
     elif (dimension == 2):
@@ -166,9 +188,8 @@ def calculate_D(N0, N2, N4, dimension, n):
     assert( abs(np.trace(D2)) < 1e-4)
 
     #F4
-    dij_dkl = np.einsum('ij,kl->ijkl', d2, d2) 
-    #dij_N2kl = np.einsum('ij,kl->ijkl', d2, N2)
-    dij_N2kl = 0.5 * (np.einsum('ij,kl->ijkl', d2, N2) + np.einsum('ij,kl->ijkl', N2, d2))#symmetrized
+    dij_dkl = symmetrize( np.einsum('ij,kl->ijkl', d2, d2) ) 
+    dij_N2kl = symmetrize( np.einsum('ij,kl->ijkl', d2, N2) )
     if (dimension == 3): 
         D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl)
     elif (dimension == 2): 
@@ -198,6 +219,7 @@ def calc_statistical_significance(D2, D4, dimension, n):
         p4 = chi2.cdf(stat4, 2)
 
     #p-values: closer to 1 = more significant. Desire > 95,99,99.5% significance.
+    print "--- Statistical Significance: desire >90%"
     print "F/D2 Statistic: {}, P-Value = {}".format(stat2, p2) 
     print "F/D4 Statistic: {}, P-Value = {}".format(stat4, p4) 
     
@@ -226,7 +248,8 @@ def calc_fractional_anisotropy(F2, dimension):
 
 def check_symmetric(a, tol=1e-8):
     #stackoverflow.com/questions/42908334
-    return np.allclose(a, a.T, atol=tol)
+#    return np.allclose(a, a.T, atol=tol)
+    return np.allclose(a, symmetrize(a), atol=tol)
 
 def calc_FT(files, dimension, weighted):
     for filename in files:
@@ -251,13 +274,17 @@ def calc_FT(files, dimension, weighted):
         D = [D0, D2, D4]
 
 #        print "N2 = ",N2
-        print "F2 vec = ",tensor_to_vector(F2)
+#        print "N2 vec = ",tensor_to_vector(N2)
 #        print "F2 = ",F2
+#        print "F2 vec = ",tensor_to_vector(F2)
 #        print "D2 = ",D2
+#        print "D2 vec = ",tensor_to_vector(D2)
 #        print "N4 = ",N4
-        print "F4 vec = ",tensor_to_vector(F4)
-#        print "F2 = ",F2
-#        print "D2 = ",D2
+#        print "N4 vec = ",tensor_to_vector(N4)
+#        print "F4 = ",F4
+#        print "F4 vec = ",tensor_to_vector(F4)
+#        print "D4 = ",D4
+#        print "D4 vec = ",tensor_to_vector(D4)
         assert( check_symmetric( N2 ) ) 
         assert( check_symmetric( F2 ) ) 
         assert( check_symmetric( D2 ) ) 
