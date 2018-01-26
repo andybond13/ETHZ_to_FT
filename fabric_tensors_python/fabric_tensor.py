@@ -25,7 +25,7 @@ def tensor_to_vector(T):
             vec[0,0] = T[0,0]
             vec[1,0] = T[1,1]
             vec[2,0] = (T[0,1] + T[1,0]) * math.sqrt(0.5)
-        if (dimension == 3):
+        elif (dimension == 3):
             vec = np.zeros( (6,1) )
             vec[0,0] = T[0,0]
             vec[1,0] = T[1,1]
@@ -48,7 +48,7 @@ def tensor_to_vector(T):
             vec[0,2] = (T[0,0,0,1] + T[0,0,1,0]) * math.sqrt(0.5)
             vec[1,2] = (T[1,1,0,1] + T[1,1,0,1]) * math.sqrt(0.5)
             vec[2,2] = (T[0,1,0,1] + T[1,0,1,0] + T[0,1,1,0] + T[1,0,0,1]) * 0.5
-        if (dimension == 3):
+        elif (dimension == 3):
             vec = np.zeros( (6,6) )
             for i in range(0,3):
                 for j in range(0,3):

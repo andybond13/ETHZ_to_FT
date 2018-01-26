@@ -13,7 +13,7 @@ import os
 import sys
 from fabric_tensor import *
 
-def filename(png, tag=None):
+def get_filename(png, tag=None):
     base = os.path.splitext(png)[0]
     if (tag == None):
         f = base+'.png'
@@ -96,7 +96,7 @@ def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None):
         plt.title(tag) 
 
     if png != None:
-        fig.savefig(filename(png,tag), dpi=300)
+        fig.savefig(get_filename(png,tag=tag), dpi=300)
 
     if plot == 'yes': 
         plt.show()
@@ -145,7 +145,7 @@ def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None, tag=None):
         plt.title(tag) 
 
     if png != None:
-        fig.savefig(filename(png,tag), dpi=300)
+        fig.savefig(get_filename(png,tag=tag), dpi=300)
 
     if plot == 'yes': 
         plt.show()
@@ -173,7 +173,7 @@ def plot_2d(F, data, deform=1, plot='yes', png=None, tag=None):
     fig = plt.figure(1)
     ax = plt.subplot(111, projection='polar')
     ax.set_aspect('equal')
-    surf = ax.plot(theta, r, 'r') 
+    surf = ax.plot(theta, r) #, 'r') 
     ax.autoscale()
     ax.set_xlabel(r'$\theta$')
 
@@ -181,7 +181,7 @@ def plot_2d(F, data, deform=1, plot='yes', png=None, tag=None):
         plt.title(tag) 
 
     if png != None:
-        fig.savefig(filename(png,tag), dpi=300)
+        fig.savefig(get_filename(png,tag=tag), dpi=300)
 
     if plot == 'yes': 
         plt.show()
@@ -256,7 +256,7 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
         plt.title(tag) 
 
     if png != None:
-        plt.savefig(filename(png,tag), dpi=300)
+        plt.savefig(get_filename(png,tag=tag), dpi=300)
 
     plt.show()
 
@@ -277,8 +277,8 @@ def colored_bar(left, height, z=None, width=0.8, bottom=0, ax=None, **kwargs):
     ax.autoscale()
     return coll
 
-def write_FT(filename, FT):
-    FT.tofile(filename) 
+def write_FT(fname, FT):
+    FT.tofile(fname) 
     return
 
 def plot_FT(filename, dimension, weighted, plot, raw, png, write):
