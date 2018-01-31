@@ -278,7 +278,7 @@ def colored_bar(left, height, z=None, width=0.8, bottom=0, ax=None, **kwargs):
     return coll
 
 def write_FT(fname, FT):
-    FT.tofile(fname) 
+    np.save(fname, FT)
     return
 
 def plot_FT(filename, dimension, weighted, plot, raw, png, write):
