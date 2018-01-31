@@ -277,8 +277,8 @@ def colored_bar(left, height, z=None, width=0.8, bottom=0, ax=None, **kwargs):
     ax.autoscale()
     return coll
 
-def write_FT(fname, FT):
-    np.save(fname, FT)
+def write_FT(fname, FT, format):
+    np.save(fname+format, FT)
     return
 
 def plot_FT(filename, dimension, weighted, plot, raw, png, write):
@@ -309,20 +309,25 @@ def plot_FT(filename, dimension, weighted, plot, raw, png, write):
             plot_3d(N4, data, deform=1, png=png, tag='N4')
             plot_3d(N6, data, deform=1, png=png, tag='N6')
             plot_3d_polar2d(F4, data, png=png, tag='polar')
- 
-    if (write != None):
-        write_FT(write, F4)
+
+    for thisWrite in write: 
+        fname = thisWrite[0]
+        format = thisWrite[1]
+        if (format == 'F2'):
+            write_FT(fname, F2, format)
+        elif (format == 'F4'):
+            write_FT(fname, F4, format)
 
     return 
 
 if __name__ == "__main__":
-    optlist,args = getopt.getopt(sys.argv[1:],'',longopts=['3D','3d','weighted','plot','raw','png=','write='])
+    optlist,args = getopt.getopt(sys.argv[1:],'',longopts=['3D','3d','weighted','plot','raw','png=','writeF2=','writeF4='])
     dimension = 2
     weighted = 0
     plot = 'no'
     raw = 'no' 
     png = None
-    write = None 
+    write = [] 
     for item in optlist:
         if (item[0].lower() == '--3d'):
             dimension = 3 
@@ -334,8 +339,10 @@ if __name__ == "__main__":
             raw = 'yes'
         elif (item[0] == '--png'):
             png = item[1]
-        elif (item[0] == '--write'):
-            write = item[1]
+        elif (item[0] == '--writeF2'):
+            write.append( [item[1],'F2'] )
+        elif (item[0] == '--writeF4'):
+            write.append( [item[1],'F4'] )
 
     for filename in args:
         plot_FT(filename, dimension, weighted, plot, raw, png, write)
