@@ -90,13 +90,13 @@ def symmetrize(T):
     order = len(T.shape) 
     if order == 1:
         key = 'i'
-    if order == 2:
+    elif order == 2:
         key = 'ij'
-    if order == 3:
+    elif order == 3:
         key = 'ijk'
-    if order == 4:
+    elif order == 4:
         key = 'ijkl'
-    if order == 6:
+    elif order == 6:
         key = 'ijklmn'
     numCombos = math.factorial(order)
 
