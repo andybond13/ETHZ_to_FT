@@ -50,12 +50,10 @@ def set_axes_equal(ax):
     ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
     ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
-def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None):
+def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None, nTheta=144, nPhi=144):
 
     #create sampling 'mesh'
-    nTheta = 144
     theta = np.linspace(0, 2*math.pi, nTheta+1)
-    nPhi = 72
     phi = np.linspace(0, math.pi, nPhi+1)
     phi, theta = np.meshgrid(phi, theta)
     x = np.sin(phi) * np.cos(theta)
@@ -101,15 +99,16 @@ def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None):
     if plot == 'yes': 
         plt.show()
 
-    return ax
+    return ax,x,y,z
 
-def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None, tag=None):
+def plot_3d_polar2d(F, data, plot='yes', png=None, tag=None, nTheta=144, nPhi=144):
+
+    if (png == None):
+        raise Exception('png = None')
 
     #create sampling 'mesh'
-    nTheta = 144
     theta = np.linspace(0, 2*math.pi, nTheta+1)
-    nPhi = 72
-    phi = np.linspace(0, math.pi, nPhi+1)
+    phi = np.linspace(0, 2*math.pi, nPhi+1)
     z = np.cos(phi)
     rad = np.sqrt( 1 - np.multiply(z, z) )
 
@@ -124,21 +123,24 @@ def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None, tag=None):
             vec = [ math.sin(thisPhi) * math.cos(thisTheta), math.sin(thisPhi) * math.sin(thisTheta), math.cos(thisPhi)] 
             val += evaluate_FT(F, vec)
         r[i] = val / len(theta)
-            
-    #deform mesh
-    if (deform == 1):
-        rad = np.multiply(rad, r)
-        z = np.multiply(z, r)
 
+        #if negative, convert
+        if r[i] < 0:
+            r[i] = abs(r[i])
+            phi[i] = phi[i] + math.pi
+            
     fig = plt.figure(1)
-    #ax = plt.subplot(111)
     ax = plt.subplot(111, projection='polar')
     ax.set_aspect('equal')
-    #surf = ax.plot(rad, z, 'r') 
     surf = ax.plot(phi, r, 'r') 
     ax.set_theta_direction(-1)
     ax.set_theta_zero_location('N')
     ax.autoscale()
+    ax.set_rmin(0)
+    ax.set_thetamin(0)
+    ax.set_thetamax(360)
+    grid = np.linspace(0, 360, 24+1)[:-1]
+    ax.set_thetagrids(grid) 
     ax.set_xlabel(r'$\phi$')
 
     if tag != None:
@@ -150,12 +152,11 @@ def plot_3d_polar2d(F, data, deform=1, plot='yes', png=None, tag=None):
     if plot == 'yes': 
         plt.show()
 
-    return ax
+    return ax,phi,r
 
-def plot_2d(F, data, deform=1, plot='yes', png=None, tag=None):
+def plot_2d(F, data, rz, plot='yes', png=None, tag=None, nTheta=720):
 
     #create sampling 'mesh'
-    nTheta = 720
     theta = np.linspace(0, 2*math.pi, nTheta+1)
     r = np.zeros( theta.shape )
     rad = np.ones( theta.shape )
@@ -163,19 +164,33 @@ def plot_2d(F, data, deform=1, plot='yes', png=None, tag=None):
     #evaluate FT at mesh
     for j in range(0, len(theta)):
         thisTheta = theta[j]
-        vec = [ math.cos(thisTheta), math.sin(thisTheta)] 
+        if (rz == 'yes'):
+            vec = [ math.sin(thisTheta), math.cos(thisTheta)] #<-- Theta is really Phi: [ math.sin(thisPhi) * math.cos(thisTheta), math.sin(thisPhi) * math.sin(thisTheta), math.cos(thisPhi)] 
+        else:
+            vec = [ math.cos(thisTheta), math.sin(thisTheta)]
         r[j] = evaluate_FT(F, vec)
-            
-    #deform mesh
-    if (deform == 1):
-        rad = np.multiply(rad, r)
+
+        #if negative, convert
+        if r[j] < 0:
+            r[j] = abs(r[j])
+            theta[j] = theta[j] + math.pi
 
     fig = plt.figure(1)
     ax = plt.subplot(111, projection='polar')
     ax.set_aspect('equal')
-    surf = ax.plot(theta, r) #, 'r') 
+    surf = ax.plot(theta, r)
     ax.autoscale()
-    ax.set_xlabel(r'$\theta$')
+    ax.set_rmin(0)
+    ax.set_thetamin(0)
+    ax.set_thetamax(360)
+    grid = np.linspace(0, 360, 24+1)[:-1]
+    ax.set_thetagrids(grid) 
+    if (rz == 'yes'):
+        ax.set_theta_direction(-1)
+        ax.set_theta_zero_location('N')
+        ax.set_xlabel(r'$\phi$')
+    else:
+        ax.set_xlabel(r'$\theta$')
 
     if tag != None:
         plt.title(tag) 
@@ -186,9 +201,9 @@ def plot_2d(F, data, deform=1, plot='yes', png=None, tag=None):
     if plot == 'yes': 
         plt.show()
 
-    return ax
+    return ax,theta,r
 
-def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, png=None, tag=None):
+def rose(data, rz, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, plot='yes', png=None, tag=None):
     #adapted from Joe Kington: https://stackoverflow.com/questions/16264837/how-would-one-add-a-colorbar-to-this-example
     """Create a "rose" diagram (a.k.a. circular histogram).  
 
@@ -217,9 +232,13 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
     """
 
     #create arcs (define top of bin arc)
-    bins = np.linspace(0, 2*math.pi, bins+1) #+ math.pi / bins
+    bin_offset = math.pi/float(bins)
+    bins = np.linspace(0, 2.0*math.pi, bins+1) + bin_offset
 
-    azimuths = np.arctan2(data[:,1], data[:,0]) #note, this is right. It is arctan2(y,x) 
+    if (rz == 'yes'):
+        azimuths = np.arctan2(data[:,0], data[:,1])
+    else:
+        azimuths = np.arctan2(data[:,1], data[:,0])
     weight = data[:,-1]
     wSum = np.sum(weight)
 
@@ -228,6 +247,7 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
 #        z = np.ones_like(azimuths)
         z = weight 
         color_by = np.sum
+
     if ax is None:
         fig = plt.figure(1)
         ax = plt.subplot(111, projection='polar')
@@ -237,10 +257,12 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
         weight = np.concatenate([weight, weight]) 
         if z is not None:
             z = np.concatenate([z, z])
-    # Convert to 0-360, in case negative or >360 azimuths are passed in.
-    azimuths[azimuths > math.pi*2] -= math.pi*2
-    azimuths[azimuths < 0] += math.pi*2
-    counts, edges = np.histogram(azimuths, range=[0, math.pi*2], bins=bins, weights=weight)
+
+   # Convert to 0-360, in case negative or >360 azimuths are passed in.
+    azimuths[azimuths > math.pi*2.0] -= math.pi*2.0
+    azimuths[azimuths < 0] += math.pi*2.0
+    counts, edges = np.histogram(azimuths, range=[0, math.pi*2.0], bins=bins, weights=weight)
+
     if z is not None:
         idx = np.digitize(azimuths, edges)
         z = np.array([color_by(z[idx == i]) for i in range(1, idx.max() + 1)])
@@ -250,7 +272,19 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
 
     ax.set_aspect('equal')
     ax.autoscale()
-    ax.set_xlabel(r'$\theta$')
+
+    ax.set_rmin(0)
+    ax.set_thetamin(0)
+    ax.set_thetamax(360)
+    grid = np.linspace(0, 360, 24+1)[:-1]
+    ax.set_thetagrids(grid) 
+
+    if (rz == 'yes'):
+        ax.set_theta_direction(-1)
+        ax.set_theta_zero_location('N')
+        ax.set_xlabel(r'$\phi$')
+    else:
+        ax.set_xlabel(r'$\theta$')
 
     if tag != None:
         plt.title(tag) 
@@ -258,7 +292,8 @@ def rose(data, z=None, ax=None, bins=30, bidirectional=True, color_by=np.mean, p
     if png != None:
         plt.savefig(get_filename(png,tag=tag), dpi=300)
 
-    plt.show()
+    if plot == 'yes': 
+        plt.show()
 
     return coll
 
@@ -289,26 +324,44 @@ def plot_FT(filename, dimension, weighted, plot, raw, png, write):
     F0,F2,F4,F6 = F
     D0,D2,D4,D6 = D
     p2,p4 = p
+    theta_res = 144/2
+    phi_res = 144/2
 
     if (plot == 'yes'):
         if dimension == 2:
             if raw == 'yes':
-                ax = plot_2d(F2, data, deform=1, plot='no', png=png, tag='F2')
-                ax = plot_2d(F4, data, deform=1, plot='no', png=png, tag='F4')
-                ax = plot_2d(F6, data, deform=1, plot='no', png=png, tag='F6')
-                rose(data, ax=ax, bins=32, color_by='count', png=png, tag='rose')
+                ax,_,_ = plot_2d(F2, data, rz, plot='no')
+                ax,_,_ = plot_2d(F4, data, rz, plot='no')
+                ax,_,_ = plot_2d(F6, data, rz, plot='no')
+                rose(data, rz, ax=ax, bins=32, color_by='count', plot=plot, png=png, tag='rose_F')
+                plot_2d(F2, data, rz, plot=plot, png=png, tag='F2')
+                plot_2d(F4, data, rz, plot=plot, png=png, tag='F4')
+                plot_2d(F6, data, rz, plot=plot, png=png, tag='F6')
+
+                ax,_,_ = plot_2d(N2, data, rz, plot='no')
+                ax,_,_ = plot_2d(N4, data, rz, plot='no')
+                ax,_,_ = plot_2d(N6, data, rz, plot='no')
+                rose(data, rz, ax=ax, bins=32, color_by='count', plot=plot, png=png, tag='rose_N')
+                plot_2d(N2, data, rz, plot=plot, png=png, tag='N2')
+                plot_2d(N4, data, rz, plot=plot, png=png, tag='N4')
+                plot_2d(N6, data, rz, plot=plot, png=png, tag='N6')
             elif raw == 'no':
-                plot_2d(F2, data, deform=1, png=png, tag='F2')
-                plot_2d(F4, data, deform=1, png=png, tag='F4')
-                plot_2d(F6, data, deform=1, png=png, tag='F6')
+                plot_2d(F2, data, rz, png=png, tag='F2')
+                plot_2d(F4, data, rz, png=png, tag='F4')
+                plot_2d(F6, data, rz, png=png, tag='F6')
         elif dimension == 3:
-            plot_3d(F2, data, deform=1, png=png, tag='F2')
-            plot_3d(F4, data, deform=1, png=png, tag='F4')
-            plot_3d(F6, data, deform=1, png=png, tag='F6')
-            plot_3d(N2, data, deform=1, png=png, tag='N2')
-            plot_3d(N4, data, deform=1, png=png, tag='N4')
-            plot_3d(N6, data, deform=1, png=png, tag='N6')
-            plot_3d_polar2d(F4, data, png=png, tag='polar')
+            plot_3d(F2, data, deform=1, png=png, tag='F2', nTheta=theta_res, nPhi=phi_res)
+            plot_3d(F4, data, deform=1, png=png, tag='F4', nTheta=theta_res, nPhi=phi_res)
+            plot_3d(F6, data, deform=1, png=png, tag='F6', nTheta=theta_res, nPhi=phi_res)
+            plot_3d(N2, data, deform=1, png=png, tag='N2', nTheta=theta_res, nPhi=phi_res)
+            plot_3d(N4, data, deform=1, png=png, tag='N4', nTheta=theta_res, nPhi=phi_res)
+            plot_3d(N6, data, deform=1, png=png, tag='N6', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(F2, data, png=png, tag='polar F2', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(F4, data, png=png, tag='polar F4', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(F6, data, png=png, tag='polar F6', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(N2, data, png=png, tag='polar N2', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(N4, data, png=png, tag='polar N4', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(N6, data, png=png, tag='polar N6', nTheta=theta_res, nPhi=phi_res)
 
     for thisWrite in write: 
         fname = thisWrite[0]
@@ -321,16 +374,21 @@ def plot_FT(filename, dimension, weighted, plot, raw, png, write):
     return 
 
 if __name__ == "__main__":
-    optlist,args = getopt.getopt(sys.argv[1:],'',longopts=['3D','3d','weighted','plot','raw','png=','writeF2=','writeF4='])
+    optlist,args = getopt.getopt(sys.argv[1:],'',longopts=['3D','3d','rz','RZ','weighted','plot','raw','png=','writeF2=','writeF4='])
     dimension = 2
     weighted = 0
     plot = 'no'
     raw = 'no' 
+    rz = 'no' 
     png = None
     write = [] 
     for item in optlist:
         if (item[0].lower() == '--3d'):
             dimension = 3 
+        if (item[0].lower() == '--rz'):
+            rz = 'yes'
+            if (dimension == 3):
+                raise Exception('Option --rz incompatible with 3-Dimensional data')  
         elif (item[0] == '--weighted'):
             weighted = 1
         elif (item[0] == '--plot'):
