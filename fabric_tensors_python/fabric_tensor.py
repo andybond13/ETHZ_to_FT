@@ -7,6 +7,11 @@ from scipy.stats import chi2
 from sympy.utilities.iterables import multiset_permutations
 import sys
 
+#modes: 2d (x,y)
+#       2d-rz (r,z);  this doesn't work so well. It does not match 3d plotted as 2d
+#       3d (x,y,z)
+#       3d (x,y,z) plotted as 2d (rz) "plot_3d_polar2d"
+
 def read_file(filename):
     A = np.loadtxt(filename)
     #x,y,z, weight
@@ -30,7 +35,7 @@ def tensor_to_vector(T):
             vec[0,0] = T[0,0]
             vec[1,0] = T[1,1]
             vec[2,0] = T[2,2]
-            vec[3,0] = (T[1,2] + T[1,2]) * math.sqrt(0.5)
+            vec[3,0] = (T[1,2] + T[2,1]) * math.sqrt(0.5)
             vec[4,0] = (T[0,2] + T[2,0]) * math.sqrt(0.5)
             vec[5,0] = (T[0,1] + T[1,0]) * math.sqrt(0.5)
         else:
