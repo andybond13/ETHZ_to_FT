@@ -9,7 +9,12 @@ time /sw/bin/python2.7 plot_fabric_tensor.py --rz --plot --raw --png=contact_tes
 #time /sw/bin/python2.7 plot_fabric_tensor.py --plot --3d --writeF2=90wt_0bar.ft --writeF4=90wt_0bar.ft --png=90wt_0bar.png 90wt_0bar_contact_contact.txt
 
 
-#check 3d-polar vs 2d-rz plots (they are different...
+#check 3d-polar vs 2d-rz plots (they are different.?..
+
+#check N & F tensors (maybe need to make more unfirm data)
 #fractional anistropy also doesn't match
+#check stat signicance 
+
+# I might need some math to do this... not quite as trivial as I thought
 #are 6th order stats available?
 #make separate repo

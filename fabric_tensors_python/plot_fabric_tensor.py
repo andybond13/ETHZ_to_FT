@@ -66,6 +66,8 @@ def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None, nTheta=144, nPhi=
         for j in range(0, x.shape[1]):
             vec = [x[i,j], y[i,j], z[i,j]]
             r[i,j] = evaluate_FT(F, vec)
+#            if (i == 8 and 'F2' in tag):
+#                print r[i,j]
 
     #deform mesh
     if (deform == 1):
@@ -103,9 +105,9 @@ def plot_3d(F, data, deform=1, plot='yes', png=None, tag=None, nTheta=144, nPhi=
 
 def plot_3d_polar2d(F, data, plot='yes', png=None, tag=None, nTheta=144, nPhi=144):
 
-    if (png == None):
-        raise Exception('png = None')
 
+    print nTheta
+    print nPhi
     #create sampling 'mesh'
     theta = np.linspace(0, 2*math.pi, nTheta+1)
     phi = np.linspace(0, 2*math.pi, nPhi+1)
@@ -122,7 +124,13 @@ def plot_3d_polar2d(F, data, plot='yes', png=None, tag=None, nTheta=144, nPhi=14
             thisTheta = theta[j]
             vec = [ math.sin(thisPhi) * math.cos(thisTheta), math.sin(thisPhi) * math.sin(thisTheta), math.cos(thisPhi)] 
             val += evaluate_FT(F, vec)
+#            if (i == 8 and 'F2' in tag):
+#                print evaluate_FT(F, vec)
         r[i] = val / len(theta)
+
+        #check this!
+#        if (i == 8 and 'F2' in tag):
+#            print r[i]
 
         #if negative, convert
         if r[i] < 0:
@@ -317,7 +325,7 @@ def write_FT(fname, FT, format):
     return
 
 def plot_FT(filename, dimension, weighted, plot, raw, png, write):
-    N,F,D,p,data = calc_FT([filename], dimension, weighted)
+    N,F,D,p,data = calc_FT([filename], dimension, weighted, rz)
 
     #unpack
     N0,N2,N4,N6 = N
@@ -325,7 +333,8 @@ def plot_FT(filename, dimension, weighted, plot, raw, png, write):
     D0,D2,D4,D6 = D
     p2,p4 = p
     theta_res = 144/2
-    phi_res = 144/2
+    phi_res = 144/2 #16/2
+#    print F2
 
     if (plot == 'yes'):
         if dimension == 2:
@@ -350,18 +359,18 @@ def plot_FT(filename, dimension, weighted, plot, raw, png, write):
                 plot_2d(F4, data, rz, png=png, tag='F4')
                 plot_2d(F6, data, rz, png=png, tag='F6')
         elif dimension == 3:
-            plot_3d(F2, data, deform=1, png=png, tag='F2', nTheta=theta_res, nPhi=phi_res)
-            plot_3d(F4, data, deform=1, png=png, tag='F4', nTheta=theta_res, nPhi=phi_res)
-            plot_3d(F6, data, deform=1, png=png, tag='F6', nTheta=theta_res, nPhi=phi_res)
-            plot_3d(N2, data, deform=1, png=png, tag='N2', nTheta=theta_res, nPhi=phi_res)
-            plot_3d(N4, data, deform=1, png=png, tag='N4', nTheta=theta_res, nPhi=phi_res)
-            plot_3d(N6, data, deform=1, png=png, tag='N6', nTheta=theta_res, nPhi=phi_res)
-            plot_3d_polar2d(F2, data, png=png, tag='polar F2', nTheta=theta_res, nPhi=phi_res)
-            plot_3d_polar2d(F4, data, png=png, tag='polar F4', nTheta=theta_res, nPhi=phi_res)
-            plot_3d_polar2d(F6, data, png=png, tag='polar F6', nTheta=theta_res, nPhi=phi_res)
-            plot_3d_polar2d(N2, data, png=png, tag='polar N2', nTheta=theta_res, nPhi=phi_res)
-            plot_3d_polar2d(N4, data, png=png, tag='polar N4', nTheta=theta_res, nPhi=phi_res)
-            plot_3d_polar2d(N6, data, png=png, tag='polar N6', nTheta=theta_res, nPhi=phi_res)
+#            plot_3d(F2, data, deform=1, png=png, tag='F2', nTheta=theta_res, nPhi=phi_res)
+#            plot_3d(F4, data, deform=1, png=png, tag='F4', nTheta=theta_res, nPhi=phi_res)
+#            plot_3d(F6, data, deform=1, png=png, tag='F6', nTheta=theta_res, nPhi=phi_res)
+#            plot_3d(N2, data, deform=1, png=png, tag='N2', nTheta=theta_res, nPhi=phi_res)
+#            plot_3d(N4, data, deform=1, png=png, tag='N4', nTheta=theta_res, nPhi=phi_res)
+#            plot_3d(N6, data, deform=1, png=png, tag='N6', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(F2, data, png=png, tag='polar_F2', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(F4, data, png=png, tag='polar_F4', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(F6, data, png=png, tag='polar_F6', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(N2, data, png=png, tag='polar_N2', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(N4, data, png=png, tag='polar_N4', nTheta=theta_res, nPhi=phi_res)
+            plot_3d_polar2d(N6, data, png=png, tag='polar_N6', nTheta=theta_res, nPhi=phi_res)
 
     for thisWrite in write: 
         fname = thisWrite[0]

@@ -82,6 +82,15 @@ def tensor_to_vector(T):
     return vec    
 
 def evaluate_FT(FT, vec):
+
+    #account for effective size of 2d-rz
+    if (len(vec) == 2 and FT.shape[0] == 3):
+        vec_basic = vec
+        vec = np.ndarray((3,))
+        vec[0] = vec_basic[0]
+        vec[1] = 0.0
+        vec[2] = vec_basic[1]
+
     if isinstance(FT, int):
         return 1
     elif ( len(FT.shape) == 2):
@@ -138,7 +147,14 @@ def kronecker(delta_dimension, data_dimension):
 
     return delta
 
-def calculate_N(data, dimension, n):
+def effective_dimension(dimension, rz):
+    #calculate effective dimension
+    dim = dimension
+    if (dimension == 2 and rz == 'yes'):
+        dim = 3
+    return dim
+
+def calculate_N(data, dimension, n, rz='no'):
 
     weight = data[:,dimension] 
     wSum = np.sum(weight)
@@ -152,85 +168,119 @@ def calculate_N(data, dimension, n):
 
     #N2
     N2 = np.einsum('ai,aj,a->ij',data[:,0:dimension],data[:,0:dimension],weight) / wSum
+    if (dimension == 2 and rz=='yes'):
+        N2_basic = N2
+        N2 = np.zeros((3,3))
+        N2[2,2] = N2_basic[1,1]
+        N2[0,0] = 0.5 * N2_basic[0,0]
+        N2[1,1] = 0.5 * N2_basic[0,0]
+        #!!! cross terms!
     assert( abs(np.trace(N2) - 1.0) < 1e-4)
+    print N2
 
     #N4
     N4 = np.einsum('ai,aj,ak,al,a->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],weight) / wSum
+    if (dimension == 2 and rz=='yes'):
+        N4_basic = N4
+        N4 = np.zeros((3,3,3,3))
+        N4[2,2,2,2] = N4_basic[1,1,1,1]
+        N4[0,0,0,0] = 0.5 * N4_basic[0,0,0,0]
+        N4[1,1,1,1] = 0.5 * N4_basic[0,0,0,0]
+        #!!! cross terms!
     assert( abs(np.trace(np.trace(N4)) - 1.0) < 1e-4)
+    print 'N4 = ',tensor_to_vector(N4)
 
     #N6
     N6 = np.einsum('ai,aj,ak,al,am,an,a->ijklmn',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],weight) / wSum
+    if (dimension == 2 and rz=='yes'):
+        N6_basic = N6
+        N6 = np.zeros((3,3,3,3,3,3))
+        N6[2,2,2,2,2,2] = N6_basic[1,1,1,1,1,1]
+        N6[0,0,0,0,0,0] = 0.5 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,1,1,1,1] = 0.5 * N6_basic[0,0,0,0,0,0]
+        #!!! cross terms!
     assert( abs(np.trace(np.trace(np.trace(N6))) - 1.0) < 1e-4)
 
     return N0, N2, N4, N6
 
-def calculate_F(N0, N2, N4, N6, dimension, n):
+def calculate_F(N0, N2, N4, N6, dimension, n, rz='no'):
+
+    #calculate effective dimension
+    dim = effective_dimension(dimension, rz)
 
     #F0
     F0 = N0
 
     #F2
-    d2 = kronecker(2, dimension)
-    if (dimension == 3):
+    d2 = kronecker(2, dim)
+    if (dim == 3):
         F2 = 15.0/2.0 * (N2 - 1.0/5.0 * d2)
-    elif (dimension == 2):
+    elif (dim == 2):
         F2 = 4.0 * (N2 - 1.0/4.0 * d2)
-    assert( abs(np.trace(F2) - dimension) < 1e-4)
+    assert( abs(np.trace(F2) - dim) < 1e-4)
+    print 'F2 = ',F2
 
     #F4
     dij_dkl = symmetrize( np.einsum('ij,kl->ijkl', d2, d2) )
     dij_N2kl = symmetrize( np.einsum('ij,kl->ijkl', d2, N2) )
-    if (dimension == 3):
+    if (dim == 3):
         F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl)
-    elif (dimension == 2):
+    elif (dim == 2):
         F4 = 16.0 * (N4 - 3.0/4.0 * dij_N2kl + 1.0/16.0 * dij_dkl)
+    print 'F4 = ', tensor_to_vector(F4)
 
     #F6
     dij_dkl_dmn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, d2) )
     dij_dkl_N2mn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, N2) )
     dij_N4klmn = symmetrize( np.einsum('ij,klmn->ijklmn', d2, N4) )
-    if (dimension == 3):
+    if (dim == 3):
         F6 = 3003.0/16.0 * (N6 - 15.0/13.0 * dij_N4klmn + 45.0/143.0 * dij_dkl_N2mn - 5.0/429.0 * dij_dkl_dmn)
-    elif (dimension == 2):
+    elif (dim == 2):
         F6 = 64.0 * (N6 - 5.0/4.0 * dij_N4klmn + 3.0/8.0 * dij_dkl_N2mn - 1.0/64.0 * dij_dkl_dmn)
 
     return F0, F2, F4, F6
 
-def calculate_D(N0, N2, N4, N6, dimension, n):
+def calculate_D(N0, N2, N4, N6, dimension, n, rz='no'):
+
+    #calculate effective dimension
+    dim = effective_dimension(dimension, rz)
 
     #D0
     D0 = N0
 
     #D2
-    d2 = kronecker(2, dimension)
-    if (dimension == 3): 
+    d2 = kronecker(2, dim)
+    if (dim == 3): 
         D2 = 15.0/2.0 * (N2 - 1.0/3.0 * d2)
-    elif (dimension == 2): 
+    elif (dim == 2): 
         D2 = 4.0 * (N2 - 1.0/2.0 * d2)
     assert( abs(np.trace(D2)) < 1e-4)
 
     #D4
     dij_dkl = symmetrize( np.einsum('ij,kl->ijkl', d2, d2) ) 
     dij_N2kl = symmetrize( np.einsum('ij,kl->ijkl', d2, N2) )
-    if (dimension == 3): 
+    if (dim == 3): 
         D4 = 315.0/8.0 * (N4 - 6.0/7.0 * dij_N2kl + 3.0/35.0 * dij_dkl)
-    elif (dimension == 2): 
+    elif (dim == 2): 
         D4 = 16.0 * (N4 - dij_N2kl + 1.0/8.0 * dij_dkl)
 
     #D6
     dij_dkl_dmn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, d2) )
     dij_dkl_N2mn = symmetrize( np.einsum('ij,kl,mn->ijklmn', d2, d2, N2) )
     dij_N4klmn = symmetrize( np.einsum('ij,klmn->ijklmn', d2, N4) )
-    if (dimension == 3):
+    if (dim == 3):
         D6 = 3003.0/16.0 * (N6 - 15.0/11.0 * dij_N4klmn + 5.0/11.0 * dij_dkl_N2mn - 5.0/231.0 * dij_dkl_dmn)
-    elif (dimension == 2):
+    elif (dim == 2):
         D6 = 64.0 * (N6 - 3.0/2.0 * dij_N4klmn + 9.0/16.0 * dij_dkl_N2mn - 1.0/32.0 * dij_dkl_dmn)
 
     return D0, D2, D4, D6
 
-def calc_statistical_significance(D2, D4, dimension, n):
+def calc_statistical_significance(D2, D4, dimension, n, rz='no'):
 
-    if (dimension == 3):
+    #calculate effective dimension
+    dim = effective_dimension(dimension, rz)
+
+    if (dim == 3):
         Dij_Dij = np.einsum('ij,ij->', D2, D2)
         stat2 = 2.0*n/15.0 * Dij_Dij
         p2 = chi2.cdf(stat2, 5)
@@ -240,7 +290,7 @@ def calc_statistical_significance(D2, D4, dimension, n):
         stat4 = 8.0*n/315.0 * (Dijkl_Dijkl - 8.0/11.0*Dijkl_Dijkm_Dlm)
         p4 = chi2.cdf(stat4, 9)
  
-    elif (dimension == 2):
+    elif (dim == 2):
         Dij_Dij = np.einsum('ij,ij->', D2, D2)
         stat2 = n/4.0 * Dij_Dij
         p2 = chi2.cdf(stat2, 2)
@@ -256,7 +306,10 @@ def calc_statistical_significance(D2, D4, dimension, n):
     
     return p2,p4
 
-def calc_fractional_anisotropy(F2, dimension):
+def calc_fractional_anisotropy(F2, dimension, rz='no'):
+
+    #calculate effective dimension
+    dim = effective_dimension(dimension, rz)
 
     eigs = np.linalg.eigvals(F2)
 
@@ -282,7 +335,7 @@ def check_symmetric(a, tol=1e-8):
 #    return np.allclose(a, a.T, atol=tol)
     return np.allclose(a, symmetrize(a), atol=tol)
 
-def calc_FT(files, dimension, weighted):
+def calc_FT(files, dimension, weighted, rz='no'):
     for filename in files:
         print filename
         data = read_file(filename)
@@ -295,13 +348,13 @@ def calc_FT(files, dimension, weighted):
         assert( data.shape[1] == dimension + 1 )
 
         #calculate fabric tensors of first kind (moment tensors, N)
-        N0, N2, N4, N6 = calculate_N(data, dimension, n)
+        N0, N2, N4, N6 = calculate_N(data, dimension, n, rz)
         N = [N0, N2, N4, N6]
         #calculate fabric tensors of first kind (fabric tensors, F)
-        F0, F2, F4, F6 = calculate_F(N0, N2, N4, N6, dimension, n)
+        F0, F2, F4, F6 = calculate_F(N0, N2, N4, N6, dimension, n, rz)
         F = [F0, F2, F4, F6]
         #calculate fabric tensors of first kind (deviator tensors, D)
-        D0, D2, D4, D6 = calculate_D(N0, N2, N4, N6, dimension, n)
+        D0, D2, D4, D6 = calculate_D(N0, N2, N4, N6, dimension, n, rz)
         D = [D0, D2, D4, D6]
 
 #        print "N2 = ",N2
@@ -330,10 +383,10 @@ def calc_FT(files, dimension, weighted):
         assert( check_symmetric( D6 ) ) 
 
         #calculate statistical significance
-        p2,p4 = calc_statistical_significance(D2, D4, dimension, n)
+        p2,p4 = calc_statistical_significance(D2, D4, dimension, n, rz)
         p = [p2,p4]
 
-        FA = calc_fractional_anisotropy(F2, dimension) 
+        FA = calc_fractional_anisotropy(F2, dimension, rz) 
  
     return N, F, D, p, data
 
