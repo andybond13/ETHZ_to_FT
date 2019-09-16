@@ -176,7 +176,7 @@ def calculate_N(data, dimension, n, rz='no'):
         N2[1,1] = 0.5 * N2_basic[0,0]
         #!!! cross terms!
     assert( abs(np.trace(N2) - 1.0) < 1e-4)
-    print N2
+    print 'N2 = ', N2
 
     #N4
     N4 = np.einsum('ai,aj,ak,al,a->ijkl',data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],data[:,0:dimension],weight) / wSum
@@ -184,8 +184,14 @@ def calculate_N(data, dimension, n, rz='no'):
         N4_basic = N4
         N4 = np.zeros((3,3,3,3))
         N4[2,2,2,2] = N4_basic[1,1,1,1]
-        N4[0,0,0,0] = 0.5 * N4_basic[0,0,0,0]
-        N4[1,1,1,1] = 0.5 * N4_basic[0,0,0,0]
+        N4[0,0,0,0] = 3.0/8.0 * N4_basic[0,0,0,0]
+        N4[1,1,1,1] = 3.0/8.0 * N4_basic[0,0,0,0]
+        N4[1,1,0,0] = 1.0/8.0 * N4_basic[0,0,0,0]
+        N4[0,0,1,1] = 1.0/8.0 * N4_basic[0,0,0,0]
+        N4[0,1,0,1] = 1.0/8.0 * N4_basic[0,0,0,0]
+        N4[0,1,1,0] = 1.0/8.0 * N4_basic[0,0,0,0]
+        N4[1,0,0,1] = 1.0/8.0 * N4_basic[0,0,0,0]
+        N4[1,0,1,0] = 1.0/8.0 * N4_basic[0,0,0,0]
         #!!! cross terms!
     assert( abs(np.trace(np.trace(N4)) - 1.0) < 1e-4)
     print 'N4 = ',tensor_to_vector(N4)
@@ -196,10 +202,43 @@ def calculate_N(data, dimension, n, rz='no'):
         N6_basic = N6
         N6 = np.zeros((3,3,3,3,3,3))
         N6[2,2,2,2,2,2] = N6_basic[1,1,1,1,1,1]
-        N6[0,0,0,0,0,0] = 0.5 * N6_basic[0,0,0,0,0,0]
-        N6[1,1,1,1,1,1] = 0.5 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,0,0,0,0] = 5.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,1,1,1,1] = 5.0/16.0 * N6_basic[0,0,0,0,0,0]
+
+        N6[0,0,0,0,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,0,1,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,0,1,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,1,0,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,1,0,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,1,1,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,0,1,1,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,0,0,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,0,0,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,0,1,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,0,1,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,1,0,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,1,0,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,1,1,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[0,1,1,1,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,0,0,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,0,0,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,0,1,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,0,1,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,1,0,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,1,0,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,1,1,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,0,1,1,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,0,0,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,0,0,1,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,0,1,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,0,1,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,1,0,0,1] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,1,0,1,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+        N6[1,1,1,1,0,0] = 1.0/16.0 * N6_basic[0,0,0,0,0,0]
+
         #!!! cross terms!
     assert( abs(np.trace(np.trace(np.trace(N6))) - 1.0) < 1e-4)
+#    print 'N6 = ',tensor_to_vector(N6)
 
     return N0, N2, N4, N6
 
@@ -225,8 +264,10 @@ def calculate_F(N0, N2, N4, N6, dimension, n, rz='no'):
     dij_N2kl = symmetrize( np.einsum('ij,kl->ijkl', d2, N2) )
     if (dim == 3):
         F4 = 315.0/8.0 * (N4 - 2.0/3.0 * dij_N2kl + 1.0/21.0 * dij_dkl)
+        assert( abs(np.trace(np.trace(F4)) - 5.0) < 1e-4)
     elif (dim == 2):
         F4 = 16.0 * (N4 - 3.0/4.0 * dij_N2kl + 1.0/16.0 * dij_dkl)
+        assert( abs(np.trace(np.trace(F4)) - dim) < 1e-4)
     print 'F4 = ', tensor_to_vector(F4)
 
     #F6
@@ -235,8 +276,11 @@ def calculate_F(N0, N2, N4, N6, dimension, n, rz='no'):
     dij_N4klmn = symmetrize( np.einsum('ij,klmn->ijklmn', d2, N4) )
     if (dim == 3):
         F6 = 3003.0/16.0 * (N6 - 15.0/13.0 * dij_N4klmn + 45.0/143.0 * dij_dkl_N2mn - 5.0/429.0 * dij_dkl_dmn)
+        assert( abs(np.trace(np.trace(np.trace(F6))) - 7.0) < 1e-4)
     elif (dim == 2):
         F6 = 64.0 * (N6 - 5.0/4.0 * dij_N4klmn + 3.0/8.0 * dij_dkl_N2mn - 1.0/64.0 * dij_dkl_dmn)
+        assert( abs(np.trace(np.trace(np.trace(F6))) - dim) < 1e-4)
+#    print 'F6 = ',tensor_to_vector(F6)
 
     return F0, F2, F4, F6
 
@@ -313,12 +357,12 @@ def calc_fractional_anisotropy(F2, dimension, rz='no'):
 
     eigs = np.linalg.eigvals(F2)
 
-    if (dimension == 2):
+    if (dim == 2):
         a = np.max(eigs) 
         b = np.min(eigs) 
         FA = math.sqrt(1.0 - (b*b)/(a*a)) 
 
-    elif (dimension == 3):
+    elif (dim == 3):
         e0 = eigs[0]
         e1 = eigs[1]
         e2 = eigs[2]

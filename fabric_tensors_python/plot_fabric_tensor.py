@@ -3,6 +3,7 @@
 import itertools
 import math
 import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
